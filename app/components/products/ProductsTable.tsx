@@ -10,27 +10,27 @@ type Props = {
 };
 
 type SortColumn =
-  | 'codigoProducto'
-  | 'descripcion'
-  | 'categoria'
-  | 'unidadesPorDisplay'
+  | 'productId'
+  | 'description'
+  | 'category'
+  | 'unitsPerDisplay'
   | 'stock';
 
 type SortDirection = 'asc' | 'desc';
 
 type Filters = {
-  codigoProducto: string;
-  descripcion: string;
-  categoria: string;
-  unidadesPorDisplay: string;
+  productId: string;
+  description: string;
+  category: string;
+  unitsPerDisplay: string;
   stock: string;
 };
 
 const initialFilters: Filters = {
-  codigoProducto: '',
-  descripcion: '',
-  categoria: '',
-  unidadesPorDisplay: '',
+  productId: '',
+  description: '',
+  category: '',
+  unitsPerDisplay: '',
   stock: '',
 };
 
@@ -62,9 +62,6 @@ function matchesText(value: string, search: string) {
 
 export default function ProductsTable({ products }: Props) {
   const [filters, setFilters] = useState<Filters>(initialFilters);
-
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   type SortRule = {
     column: SortColumn;
@@ -109,18 +106,15 @@ export default function ProductsTable({ products }: Props) {
 
   const filteredProducts = useMemo(() => {
     const result = products.filter((product) => {
-      const matchesCode = matchesText(
-        product.codigoProducto,
-        filters.codigoProducto,
-      );
+      const matchesCode = matchesText(product.productId, filters.productId);
 
-      const matchesName = matchesText(product.descripcion, filters.descripcion);
+      const matchesName = matchesText(product.description, filters.description);
 
-      const matchesCategory = matchesText(product.categoria, filters.categoria);
+      const matchesCategory = matchesText(product.category, filters.category);
 
       const matchesDisplay =
-        !filters.unidadesPorDisplay ||
-        product.unidadesPorDisplay === Number(filters.unidadesPorDisplay);
+        !filters.unitsPerDisplay ||
+        product.unitsPerDisplay === Number(filters.unitsPerDisplay);
 
       const matchesStock =
         !filters.stock || product.stock === Number(filters.stock);
@@ -206,45 +200,45 @@ export default function ProductsTable({ products }: Props) {
             >
               <th className="px-4 pt-4 text-left">
                 <button
-                  onClick={() => handleSort('codigoProducto')}
+                  onClick={() => handleSort('productId')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
                   Código
-                  <SortIcon column="codigoProducto" />
+                  <SortIcon column="productId" />
                 </button>
               </th>
 
               <th className="px-4 pt-4 text-left">
                 <button
-                  onClick={() => handleSort('descripcion')}
+                  onClick={() => handleSort('description')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
                   Descripción
-                  <SortIcon column="descripcion" />
+                  <SortIcon column="description" />
                 </button>
               </th>
 
               <th className="px-4 pt-4 text-left">
                 <button
-                  onClick={() => handleSort('categoria')}
+                  onClick={() => handleSort('category')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
                   Categoría
-                  <SortIcon column="categoria" />
+                  <SortIcon column="category" />
                 </button>
               </th>
 
               <th className="px-4 pt-4 text-left">
                 <button
-                  onClick={() => handleSort('unidadesPorDisplay')}
+                  onClick={() => handleSort('unitsPerDisplay')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
                   style={{ color: 'var(--color-text-muted)' }}
                 >
                   Display
-                  <SortIcon column="unidadesPorDisplay" />
+                  <SortIcon column="unitsPerDisplay" />
                 </button>
               </th>
 
@@ -266,9 +260,10 @@ export default function ProductsTable({ products }: Props) {
             >
               <th className="p-4">
                 <input
-                  value={filters.codigoProducto}
+                  id="codigoProducto"
+                  value={filters.productId}
                   onChange={(event) =>
-                    handleFilterChange('codigoProducto', event.target.value)
+                    handleFilterChange('productId', event.target.value)
                   }
                   placeholder="%código%"
                   className="w-full rounded-md border px-3 py-2 text-sm outline-none"
@@ -280,9 +275,10 @@ export default function ProductsTable({ products }: Props) {
 
               <th className="p-4">
                 <input
-                  value={filters.descripcion}
+                  id="descripcion"
+                  value={filters.description}
                   onChange={(event) =>
-                    handleFilterChange('descripcion', event.target.value)
+                    handleFilterChange('description', event.target.value)
                   }
                   placeholder="%nombre%"
                   className="w-full rounded-md border px-3 py-2 text-sm outline-none"
@@ -294,9 +290,10 @@ export default function ProductsTable({ products }: Props) {
 
               <th className="p-4">
                 <input
-                  value={filters.categoria}
+                  id="categoria"
+                  value={filters.category}
                   onChange={(event) =>
-                    handleFilterChange('categoria', event.target.value)
+                    handleFilterChange('category', event.target.value)
                   }
                   placeholder="FOOD"
                   className="w-full rounded-md border px-3 py-2 text-sm outline-none"
@@ -308,10 +305,11 @@ export default function ProductsTable({ products }: Props) {
 
               <th className="p-4">
                 <input
+                  id="unidadesPorDisplay"
                   type="number"
-                  value={filters.unidadesPorDisplay}
+                  value={filters.unitsPerDisplay}
                   onChange={(event) =>
-                    handleFilterChange('unidadesPorDisplay', event.target.value)
+                    handleFilterChange('unitsPerDisplay', event.target.value)
                   }
                   placeholder="24"
                   className="w-full rounded-md border px-3 py-2 text-sm outline-none"
@@ -353,7 +351,7 @@ export default function ProductsTable({ products }: Props) {
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  {product.codigoProducto}
+                  {product.productId}
                 </td>
 
                 <td className="px-4 py-4">
@@ -372,7 +370,7 @@ export default function ProductsTable({ products }: Props) {
                       className="text-sm font-medium"
                       style={{ color: 'var(--color-text)' }}
                     >
-                      {product.descripcion}
+                      {product.description}
                     </span>
                   </div>
                 </td>
@@ -383,7 +381,7 @@ export default function ProductsTable({ products }: Props) {
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  {product.categoria}
+                  {product.category}
                 </td>
 
                 <td
@@ -392,7 +390,7 @@ export default function ProductsTable({ products }: Props) {
                     color: 'var(--color-text-secondary)',
                   }}
                 >
-                  {product.unidadesPorDisplay}
+                  {product.unitsPerDisplay}
                 </td>
 
                 <td

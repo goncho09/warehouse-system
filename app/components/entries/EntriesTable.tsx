@@ -54,7 +54,7 @@ export default function EntriesTable({ entries, products }: Props) {
           <tbody>
             {entries.map((entry) => {
               const product = products.find(
-                (product) => product.id === entry.productoId,
+                (product) => product.id === entry.productId,
               );
 
               return (
@@ -69,35 +69,37 @@ export default function EntriesTable({ entries, products }: Props) {
                     className="px-5 py-4 text-sm font-medium"
                     style={{ color: 'var(--color-text)' }}
                   >
-                    {product?.descripcion ?? 'Producto no encontrado'}
+                    {product?.description ?? 'Producto no encontrado'}
                   </td>
 
                   <td
                     className="px-5 py-4 text-sm"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    {entry.lote}
+                    {entry.lot}
                   </td>
 
                   <td
                     className="px-5 py-4 text-sm"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    {entry.vencimiento}
+                    {entry.dueDate
+                      ? new Date(entry.dueDate).toLocaleDateString()
+                      : 'N/A'}
                   </td>
 
                   <td
                     className="px-5 py-4 text-sm font-medium"
                     style={{ color: 'var(--color-text)' }}
                   >
-                    {entry.cantidad}
+                    {entry.count}
                   </td>
 
                   <td
                     className="px-5 py-4 text-sm"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    {entry.codigoPya}
+                    {entry.PYAID}
                   </td>
 
                   <td className="px-5 py-4">

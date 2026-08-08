@@ -1,9 +1,17 @@
 export interface Entry {
   id: number;
-  productoId: number;
-  lote: string;
-  vencimiento: string;
-  cantidad: number;
-  codigoPya: string;
-  fechaIngreso: string;
+  productId: number;
+  lot: string;
+  dueDate: string;
+  count: number;
+  PYAID: string;
+  entryDate: string;
 }
+
+export type EntryFormData = {
+  productId: number;
+  lot: string;
+  dueDate: string;
+  count: string;
+  PYAID: string;
+};

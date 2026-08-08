@@ -4,14 +4,7 @@ import { X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { Product } from '@/types/Product';
-
-export type EntryFormData = {
-  productoId: string;
-  lote: string;
-  vencimiento: string;
-  cantidad: string;
-  codigoPya: string;
-};
+import { EntryFormData } from '@/types/Entry';
 
 type Props = {
   isOpen: boolean;
@@ -21,11 +14,11 @@ type Props = {
 };
 
 const initialFormData: EntryFormData = {
-  productoId: '',
-  lote: '',
-  vencimiento: '',
-  cantidad: '',
-  codigoPya: '',
+  productId: 0,
+  lot: '',
+  dueDate: '',
+  count: '',
+  PYAID: '',
 };
 
 export default function EntryModal({
@@ -107,10 +100,10 @@ export default function EntryModal({
               </label>
 
               <select
-                id="productoId"
-                name="productoId"
+                id="productId"
+                name="productId"
                 required
-                value={formData.productoId}
+                value={formData.productId}
                 onChange={handleChange}
                 className="w-full rounded-lg border px-3 py-2.5 text-sm"
                 style={{
@@ -122,7 +115,7 @@ export default function EntryModal({
 
                 {products.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.codigoProducto} - {product.descripcion}
+                    {product.productId} - {product.description}
                   </option>
                 ))}
               </select>
@@ -134,10 +127,10 @@ export default function EntryModal({
               </label>
 
               <input
-                id="lote"
-                name="lote"
+                id="lot"
+                name="lot"
                 required
-                value={formData.lote}
+                value={formData.lot}
                 onChange={handleChange}
                 className="w-full rounded-lg border px-3 py-2.5 text-sm"
                 style={{ borderColor: 'var(--color-border)' }}
@@ -146,18 +139,18 @@ export default function EntryModal({
 
             <div>
               <label
-                htmlFor="vencimiento"
+                htmlFor="dueDate"
                 className="mb-2 block text-sm font-medium"
               >
                 Vencimiento
               </label>
 
               <input
-                id="vencimiento"
-                name="vencimiento"
+                id="dueDate"
+                name="dueDate"
                 type="date"
                 required
-                value={formData.vencimiento}
+                value={formData.dueDate}
                 onChange={handleChange}
                 className="w-full rounded-lg border px-3 py-2.5 text-sm"
                 style={{ borderColor: 'var(--color-border)' }}
@@ -165,20 +158,17 @@ export default function EntryModal({
             </div>
 
             <div>
-              <label
-                htmlFor="cantidad"
-                className="mb-2 block text-sm font-medium"
-              >
+              <label htmlFor="count" className="mb-2 block text-sm font-medium">
                 Cantidad
               </label>
 
               <input
-                id="cantidad"
-                name="cantidad"
+                id="count"
+                name="count"
                 type="number"
                 min="1"
                 required
-                value={formData.cantidad}
+                value={formData.count}
                 onChange={handleChange}
                 className="w-full rounded-lg border px-3 py-2.5 text-sm"
                 style={{ borderColor: 'var(--color-border)' }}
@@ -186,18 +176,15 @@ export default function EntryModal({
             </div>
 
             <div>
-              <label
-                htmlFor="codigoPya"
-                className="mb-2 block text-sm font-medium"
-              >
+              <label htmlFor="PYAID" className="mb-2 block text-sm font-medium">
                 PYA
               </label>
 
               <input
-                id="codigoPya"
-                name="codigoPya"
+                id="PYAID"
+                name="PYAID"
                 required
-                value={formData.codigoPya}
+                value={formData.PYAID}
                 onChange={handleChange}
                 className="w-full rounded-lg border px-3 py-2.5 text-sm"
                 style={{ borderColor: 'var(--color-border)' }}

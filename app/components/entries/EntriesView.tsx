@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { PackagePlus } from 'lucide-react';
 
-import NewEntryModal, { type EntryFormData } from './NewEntryModal';
+import NewEntryModal from './NewEntryModal';
+import type { EntryFormData } from '@/types/Entry';
 
 import type { Product } from '@/types/Product';
 import type { Entry } from '@/types/Entry';
@@ -19,12 +20,12 @@ export default function EntriesView({ products }: Props) {
   function handleCreateEntry(data: EntryFormData) {
     const newEntry: Entry = {
       id: Date.now(),
-      productoId: Number(data.productoId),
-      lote: data.lote,
-      vencimiento: data.vencimiento,
-      cantidad: Number(data.cantidad),
-      codigoPya: data.codigoPya,
-      fechaIngreso: new Date().toISOString(),
+      productId: data.productId,
+      lot: data.lot,
+      dueDate: data.dueDate,
+      count: parseInt(data.count, 10),
+      PYAID: data.PYAID,
+      entryDate: new Date().toISOString(),
     };
 
     setEntries((previous) => [newEntry, ...previous]);
@@ -96,7 +97,7 @@ export default function EntriesView({ products }: Props) {
             <tbody>
               {entries.map((entry) => {
                 const product = products.find(
-                  (product) => product.id === entry.productoId,
+                  (product) => product.id === entry.productId,
                 );
 
                 return (
@@ -108,16 +109,18 @@ export default function EntriesView({ products }: Props) {
                     }}
                   >
                     <td className="px-5 py-4 text-sm font-medium">
-                      {product?.descripcion}
+                      {product?.description}
                     </td>
 
-                    <td className="px-5 py-4 text-sm">{entry.lote}</td>
+                    <td className="px-5 py-4 text-sm">{entry.lot}</td>
 
-                    <td className="px-5 py-4 text-sm">{entry.vencimiento}</td>
+                    <td className="px-5 py-4 text-sm">{entry.dueDate}</td>
 
-                    <td className="px-5 py-4 text-sm">{entry.cantidad}</td>
+                    <td className="px-5 py-4 text-sm">{entry.count}</td>
 
-                    <td className="px-5 py-4 text-sm">{entry.codigoPya}</td>
+                    <td className="px-5 py-4 text-sm">{entry.PYAID}</td>
+
+                    <td className="px-5 py-4 text-sm">{entry.entryDate}</td>
 
                     <td className="px-5 py-4">
                       <span

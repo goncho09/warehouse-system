@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Settings,
   PackagePlus,
+  Boxes,
 } from 'lucide-react';
 
 const menuItems = [
@@ -25,6 +26,11 @@ const menuItems = [
     label: 'Categorías',
     icon: Tags,
     href: '/categorias',
+  },
+  {
+    label: 'Inventario',
+    icon: Boxes,
+    href: '/inventario',
   },
   {
     label: 'Ubicaciones',
