@@ -1,17 +1,18 @@
 export interface Entry {
   id: number;
-  productId: number;
+  productId: string;
   lot: string;
   dueDate: string;
   count: number;
-  PYAID: string;
+  cntId: string;
   entryDate: string;
 }
 
 export type EntryFormData = {
-  productId: number;
+  productId: string;
+  barCode: string;
   lot: string;
   dueDate: string;
   count: string;
-  PYAID: string;
+  cntId: string;
 };

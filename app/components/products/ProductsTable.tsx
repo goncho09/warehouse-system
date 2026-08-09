@@ -11,6 +11,7 @@ type Props = {
 
 type SortColumn =
   | 'productId'
+  | 'barCode'
   | 'description'
   | 'category'
   | 'unitsPerDisplay'
@@ -20,6 +21,7 @@ type SortDirection = 'asc' | 'desc';
 
 type Filters = {
   productId: string;
+  barCode: string;
   description: string;
   category: string;
   unitsPerDisplay: string;
@@ -28,6 +30,7 @@ type Filters = {
 
 const initialFilters: Filters = {
   productId: '',
+  barCode: '',
   description: '',
   category: '',
   unitsPerDisplay: '',
@@ -110,7 +113,8 @@ export default function ProductsTable({ products }: Props) {
 
       const matchesName = matchesText(product.description, filters.description);
 
-      const matchesCategory = matchesText(product.category, filters.category);
+      const matchesCategory =
+        !filters.category || product.category === filters.category;
 
       const matchesDisplay =
         !filters.unitsPerDisplay ||
@@ -198,7 +202,7 @@ export default function ProductsTable({ products }: Props) {
               className="border-b"
               style={{ borderColor: 'var(--color-border)' }}
             >
-              <th className="px-4 pt-4 text-left">
+              <th className="p-4 text-left">
                 <button
                   onClick={() => handleSort('productId')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
@@ -209,7 +213,18 @@ export default function ProductsTable({ products }: Props) {
                 </button>
               </th>
 
-              <th className="px-4 pt-4 text-left">
+              <th className="p-4 text-left">
+                <button
+                  onClick={() => handleSort('barCode')}
+                  className="flex items-center gap-2 text-xs font-medium uppercase"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  Código de barras
+                  <SortIcon column="barCode" />
+                </button>
+              </th>
+
+              <th className="p-4 text-left">
                 <button
                   onClick={() => handleSort('description')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
@@ -220,7 +235,7 @@ export default function ProductsTable({ products }: Props) {
                 </button>
               </th>
 
-              <th className="px-4 pt-4 text-left">
+              <th className="p-4 text-left">
                 <button
                   onClick={() => handleSort('category')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
@@ -231,18 +246,7 @@ export default function ProductsTable({ products }: Props) {
                 </button>
               </th>
 
-              <th className="px-4 pt-4 text-left">
-                <button
-                  onClick={() => handleSort('unitsPerDisplay')}
-                  className="flex items-center gap-2 text-xs font-medium uppercase"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Display
-                  <SortIcon column="unitsPerDisplay" />
-                </button>
-              </th>
-
-              <th className="px-4 pt-4 text-left">
+              <th className="p-4 text-left">
                 <button
                   onClick={() => handleSort('stock')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
@@ -275,6 +279,21 @@ export default function ProductsTable({ products }: Props) {
 
               <th className="p-4">
                 <input
+                  id="codigoBarras"
+                  value={filters.barCode}
+                  onChange={(event) =>
+                    handleFilterChange('barCode', event.target.value)
+                  }
+                  placeholder="%código de barras%"
+                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
+                  style={{
+                    borderColor: 'var(--color-border)',
+                  }}
+                />
+              </th>
+
+              <th className="p-4">
+                <input
                   id="descripcion"
                   value={filters.description}
                   onChange={(event) =>
@@ -289,34 +308,24 @@ export default function ProductsTable({ products }: Props) {
               </th>
 
               <th className="p-4">
-                <input
-                  id="categoria"
+                <select
                   value={filters.category}
                   onChange={(event) =>
                     handleFilterChange('category', event.target.value)
                   }
-                  placeholder="FOOD"
                   className="w-full rounded-md border px-3 py-2 text-sm outline-none"
                   style={{
                     borderColor: 'var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                    color: 'var(--color-text)',
                   }}
-                />
-              </th>
-
-              <th className="p-4">
-                <input
-                  id="unidadesPorDisplay"
-                  type="number"
-                  value={filters.unitsPerDisplay}
-                  onChange={(event) =>
-                    handleFilterChange('unitsPerDisplay', event.target.value)
-                  }
-                  placeholder="24"
-                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                  }}
-                />
+                >
+                  <option value="">Todas</option>
+                  <option value="FOOD">Food</option>
+                  <option value="NO_FOOD">No Food</option>
+                  <option value="CONGELADO">Congelado</option>
+                  <option value="REFRIGERADO">Refrigerado</option>
+                </select>
               </th>
 
               <th className="p-4">
@@ -354,6 +363,15 @@ export default function ProductsTable({ products }: Props) {
                   {product.productId}
                 </td>
 
+                <td
+                  className="px-4 py-4 text-sm"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  {product.barCode}
+                </td>
+
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
                     <div
@@ -382,15 +400,6 @@ export default function ProductsTable({ products }: Props) {
                   }}
                 >
                   {product.category}
-                </td>
-
-                <td
-                  className="px-4 py-4 text-sm"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {product.unitsPerDisplay}
                 </td>
 
                 <td

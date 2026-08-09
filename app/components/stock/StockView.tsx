@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Boxes, MapPin, PackageCheck } from 'lucide-react';
 
 import StockTable from './StockTable';
@@ -14,9 +14,38 @@ type Props = {
 };
 
 export default function StockView({ products, stock }: Props) {
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
-    products[0]?.id ?? null,
+    null,
   );
+
+  const searchResults = useMemo(() => {
+    const value = debouncedSearch.trim().toLowerCase();
+
+    if (value.length < 2) {
+      return [];
+    }
+
+    return products.filter((product) => {
+      const barcodeMatch = product.barCode.toLowerCase() === value;
+
+      const descriptionMatch = product.description
+        .toLowerCase()
+        .includes(value);
+
+      return barcodeMatch || descriptionMatch;
+    });
+  }, [products, debouncedSearch]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   const selectedProduct = products.find(
     (product) => product.id === selectedProductId,
@@ -70,22 +99,107 @@ export default function StockView({ products, stock }: Props) {
           Producto
         </label>
 
-        <select
-          id="product"
-          value={selectedProductId ?? ''}
-          onChange={(event) => setSelectedProductId(Number(event.target.value))}
-          className="w-full rounded-lg border px-3 py-2.5 text-sm md:max-w-xl"
+        <section
+          className="mb-6 rounded-xl border p-5"
           style={{
-            borderColor: 'var(--color-border)',
             backgroundColor: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
           }}
         >
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.productId} - {product.description}
-            </option>
-          ))}
-        </select>
+          <label
+            htmlFor="product-search"
+            className="mb-2 block text-sm font-medium"
+            style={{ color: 'var(--color-text)' }}
+          >
+            Buscar producto
+          </label>
+
+          <input
+            id="product-search"
+            type="text"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setSelectedProductId(null);
+            }}
+            placeholder="Código de barras o descripción..."
+            className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
+              color: 'var(--color-text)',
+            }}
+          />
+
+          {debouncedSearch.length >= 2 && selectedProductId === null && (
+            <div
+              className="mt-2 overflow-hidden rounded-lg border"
+              style={{
+                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-surface)',
+              }}
+            >
+              {searchResults.length > 0 ? (
+                searchResults.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedProductId(product.id);
+                      setSearch(product.description);
+                    }}
+                    className="
+              flex w-full items-center justify-between
+              border-b px-4 py-3 text-left
+              transition-colors
+              last:border-0
+              hover:bg-(--color-surface-hover)
+            "
+                    style={{
+                      borderColor: 'var(--color-border-light)',
+                    }}
+                  >
+                    <div>
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: 'var(--color-text)' }}
+                      >
+                        {product.description}
+                      </p>
+
+                      <p
+                        className="mt-0.5 text-xs"
+                        style={{
+                          color: 'var(--color-text-secondary)',
+                        }}
+                      >
+                        {product.productId}
+                      </p>
+                    </div>
+
+                    <span
+                      className="text-xs"
+                      style={{
+                        color: 'var(--color-text-muted)',
+                      }}
+                    >
+                      {product.barCode}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p
+                  className="px-4 py-3 text-sm"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  No se encontraron productos.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
       </section>
 
       {selectedProduct && (

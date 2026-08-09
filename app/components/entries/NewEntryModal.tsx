@@ -14,11 +14,12 @@ type Props = {
 };
 
 const initialFormData: EntryFormData = {
-  productId: 0,
+  productId: '',
+  barCode: '',
   lot: '',
   dueDate: '',
   count: '',
-  PYAID: '',
+  cntId: '',
 };
 
 export default function EntryModal({
@@ -28,6 +29,16 @@ export default function EntryModal({
   onCreate,
 }: Props) {
   const [formData, setFormData] = useState<EntryFormData>(initialFormData);
+  const [barCode, setBarCode] = useState('');
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const minimumDueDate = tomorrow.toISOString().split('T')[0];
+
+  const selectedProduct = products.find(
+    (product) => product.barCode === barCode.trim(),
+  );
 
   if (!isOpen) return null;
 
@@ -42,13 +53,102 @@ export default function EntryModal({
     }));
   }
 
+  function handleCountChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+
+    if (value === '') {
+      setFormData((previous) => ({
+        ...previous,
+        count: '',
+      }));
+      return;
+    }
+
+    const count = Number(value);
+
+    if (!Number.isInteger(count) || count < 1) {
+      return;
+    }
+
+    setFormData((previous) => ({
+      ...previous,
+      count: value,
+    }));
+  }
+
+  function handleBarcodeChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+
+    setBarCode(value);
+
+    const product = products.find(
+      (product) => product.barCode === value.trim(),
+    );
+
+    setFormData((previous) => ({
+      ...previous,
+      barCode: value,
+      productId: product?.id ?? '',
+    }));
+  }
+
+  function getDaysUntilDueDate(dueDate: string) {
+    if (!dueDate) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const due = new Date(`${dueDate}T00:00:00`);
+
+    const difference = due.getTime() - today.getTime();
+
+    return Math.ceil(difference / (1000 * 60 * 60 * 24));
+  }
+
+  const daysUntilDueDate = getDaysUntilDueDate(formData.dueDate);
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!selectedProduct) {
+      alert(
+        'No se ha seleccionado un producto válido. Por favor, escanee o ingrese un código de barras válido.',
+      );
+      return;
+    }
+
+    const count = Number(formData.count);
+
+    if (!Number.isInteger(count) || count < 1) {
+      alert('La cantidad debe ser mayor a 0.');
+      return;
+    }
+
+    if (daysUntilDueDate === null || daysUntilDueDate <= 0) {
+      alert('La fecha de vencimiento debe ser posterior a hoy.');
+      return;
+    }
+
     onCreate(formData);
     setFormData(initialFormData);
+    setBarCode('');
     onClose();
   }
+
+  function handleClose() {
+    setFormData(initialFormData);
+    setBarCode('');
+    onClose();
+  }
+
+  const inputClass =
+    'w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--color-primary)]';
+
+  const inputStyle = {
+    borderColor: 'var(--color-border)',
+    backgroundColor: 'var(--color-surface)',
+    color: 'var(--color-text)',
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -81,7 +181,7 @@ export default function EntryModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg p-2"
             style={{ color: 'var(--color-text-secondary)' }}
           >
@@ -93,32 +193,60 @@ export default function EntryModal({
           <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
             <div className="md:col-span-2">
               <label
-                htmlFor="productoId"
+                htmlFor="barcode"
                 className="mb-2 block text-sm font-medium"
+                style={{ color: 'var(--color-text)' }}
               >
-                Producto
+                Código de barras
               </label>
 
-              <select
-                id="productId"
-                name="productId"
-                required
-                value={formData.productId}
-                onChange={handleChange}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-surface)',
-                }}
-              >
-                <option value="">Seleccionar producto</option>
+              <input
+                id="barcode"
+                type="text"
+                value={barCode}
+                onChange={handleBarcodeChange}
+                placeholder="Escanear o ingresar código..."
+                autoFocus
+                className={inputClass}
+                style={inputStyle}
+              />
 
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.productId} - {product.description}
-                  </option>
-                ))}
-              </select>
+              {selectedProduct && (
+                <div
+                  className="md:col-span-2 rounded-lg border p-4"
+                  style={{
+                    borderColor: 'var(--color-primary-light)',
+                    backgroundColor: 'var(--color-primary-hover)',
+                  }}
+                >
+                  <p
+                    className="font-medium"
+                    style={{ color: 'var(--color-text)' }}
+                  >
+                    {selectedProduct.description}
+                  </p>
+
+                  <div
+                    className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    <span>Código: {selectedProduct.id}</span>
+
+                    <span>Display: {selectedProduct.unitsPerDisplay}</span>
+
+                    <span>Categoría: {selectedProduct.category}</span>
+                  </div>
+                </div>
+              )}
+
+              {barCode && !selectedProduct && (
+                <p
+                  className="md:col-span-2 text-sm"
+                  style={{ color: 'var(--color-danger)' }}
+                >
+                  No se encontró ningún producto con ese código de barras.
+                </p>
+              )}
             </div>
 
             <div>
@@ -132,8 +260,8 @@ export default function EntryModal({
                 required
                 value={formData.lot}
                 onChange={handleChange}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                style={{ borderColor: 'var(--color-border)' }}
+                className={inputClass}
+                style={inputStyle}
               />
             </div>
 
@@ -141,6 +269,7 @@ export default function EntryModal({
               <label
                 htmlFor="dueDate"
                 className="mb-2 block text-sm font-medium"
+                style={{ color: 'var(--color-text)' }}
               >
                 Vencimiento
               </label>
@@ -149,12 +278,29 @@ export default function EntryModal({
                 id="dueDate"
                 name="dueDate"
                 type="date"
+                min={minimumDueDate}
                 required
                 value={formData.dueDate}
                 onChange={handleChange}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                style={{ borderColor: 'var(--color-border)' }}
+                className={inputClass}
+                style={inputStyle}
               />
+
+              {daysUntilDueDate !== null && (
+                <p
+                  className="mt-2 text-xs"
+                  style={{
+                    color:
+                      daysUntilDueDate > 0
+                        ? 'var(--color-text-secondary)'
+                        : 'var(--color-danger)',
+                  }}
+                >
+                  {daysUntilDueDate > 0
+                    ? `${daysUntilDueDate} días hasta el vencimiento`
+                    : 'La fecha de vencimiento no es válida'}
+                </p>
+              )}
             </div>
 
             <div>
@@ -167,27 +313,28 @@ export default function EntryModal({
                 name="count"
                 type="number"
                 min="1"
+                step="1"
                 required
                 value={formData.count}
-                onChange={handleChange}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                style={{ borderColor: 'var(--color-border)' }}
+                onChange={handleCountChange}
+                className={inputClass}
+                style={inputStyle}
               />
             </div>
 
             <div>
-              <label htmlFor="PYAID" className="mb-2 block text-sm font-medium">
-                PYA
+              <label htmlFor="cntId" className="mb-2 block text-sm font-medium">
+                CNT
               </label>
 
               <input
-                id="PYAID"
-                name="PYAID"
+                id="cntId"
+                name="cntId"
                 required
-                value={formData.PYAID}
+                value={formData.cntId}
                 onChange={handleChange}
-                className="w-full rounded-lg border px-3 py-2.5 text-sm"
-                style={{ borderColor: 'var(--color-border)' }}
+                className={inputClass}
+                style={inputStyle}
               />
             </div>
 
@@ -210,7 +357,7 @@ export default function EntryModal({
                   className="mt-1 text-xs"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  El PYA deberá ubicarse posteriormente para quedar disponible.
+                  El CNT deberá ubicarse posteriormente para quedar disponible.
                 </p>
               </div>
             </div>

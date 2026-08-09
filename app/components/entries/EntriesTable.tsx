@@ -42,12 +42,13 @@ export default function EntriesTable({ entries, products }: Props) {
                 color: 'var(--color-text-muted)',
               }}
             >
-              <th className="px-5 py-4 font-medium">Producto</th>
+              <th className="px-5 py-4 font-medium">Product ID</th>
               <th className="px-5 py-4 font-medium">Lote</th>
+              <th className="px-5 py-4 font-medium">Código de barras</th>
               <th className="px-5 py-4 font-medium">Vencimiento</th>
               <th className="px-5 py-4 font-medium">Cantidad</th>
-              <th className="px-5 py-4 font-medium">PYA</th>
-              <th className="px-5 py-4 font-medium">Ubicación</th>
+              <th className="px-5 py-4 font-medium">Contenedor</th>
+              <th className="px-5 py-4 font-medium">Fecha ingreso</th>
             </tr>
           </thead>
 
@@ -69,22 +70,37 @@ export default function EntriesTable({ entries, products }: Props) {
                     className="px-5 py-4 text-sm font-medium"
                     style={{ color: 'var(--color-text)' }}
                   >
-                    {product?.description ?? 'Producto no encontrado'}
+                    {entry.productId}
                   </td>
 
                   <td
                     className="px-5 py-4 text-sm"
-                    style={{ color: 'var(--color-text-secondary)' }}
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                    }}
                   >
                     {entry.lot}
                   </td>
 
                   <td
                     className="px-5 py-4 text-sm"
-                    style={{ color: 'var(--color-text-secondary)' }}
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
+                    {product?.barCode ?? 'N/A'}
+                  </td>
+
+                  <td
+                    className="px-5 py-4 text-sm"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                    }}
                   >
                     {entry.dueDate
-                      ? new Date(entry.dueDate).toLocaleDateString()
+                      ? new Date(
+                          `${entry.dueDate}T00:00:00`,
+                        ).toLocaleDateString()
                       : 'N/A'}
                   </td>
 
@@ -96,22 +112,19 @@ export default function EntriesTable({ entries, products }: Props) {
                   </td>
 
                   <td
-                    className="px-5 py-4 text-sm"
-                    style={{ color: 'var(--color-text-secondary)' }}
+                    className="px-5 py-4 text-sm font-medium"
+                    style={{ color: 'var(--color-text)' }}
                   >
-                    {entry.PYAID}
+                    {entry.cntId}
                   </td>
 
-                  <td className="px-5 py-4">
-                    <span
-                      className="rounded-full px-2.5 py-1 text-xs font-medium"
-                      style={{
-                        backgroundColor: 'var(--color-warning-light)',
-                        color: 'var(--color-warning)',
-                      }}
-                    >
-                      En puerta
-                    </span>
+                  <td
+                    className="px-5 py-4 text-sm"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
+                    {new Date(entry.entryDate).toLocaleString()}
                   </td>
                 </tr>
               );
