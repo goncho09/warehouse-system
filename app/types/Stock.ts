@@ -1,10 +1,10 @@
 export type LocationType = 'PICKING' | 'EN_PUERTA' | 'AVERIAS';
 
-export interface InventoryRecord {
+export interface StockRecord {
   id: number;
   productId: number;
-  ubicationCode: string;
-  ubicationType: LocationType;
+  locationCode: string;
+  locationType: LocationType;
   count: number;
   dueDate: string;
 }

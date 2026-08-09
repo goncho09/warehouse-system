@@ -1,10 +1,10 @@
-import type { InventoryRecord } from '@/types/Inventory';
+import type { StockRecord } from '@/types/Stock';
 
 type Props = {
-  records: InventoryRecord[];
+  records: StockRecord[];
 };
 
-function getLocationLabel(type: InventoryRecord['ubicationType']) {
+function getLocationLabel(type: StockRecord['locationType']) {
   switch (type) {
     case 'PICKING':
       return 'Picking';
@@ -15,7 +15,7 @@ function getLocationLabel(type: InventoryRecord['ubicationType']) {
   }
 }
 
-export default function InventoryTable({ records }: Props) {
+export default function StockTable({ records }: Props) {
   return (
     <section
       className="overflow-hidden rounded-xl border"
@@ -53,7 +53,7 @@ export default function InventoryTable({ records }: Props) {
                 className="px-5 py-4 text-sm font-medium"
                 style={{ color: 'var(--color-text)' }}
               >
-                {record.ubicationCode}
+                {record.locationCode}
               </td>
 
               <td className="px-5 py-4">
@@ -61,21 +61,21 @@ export default function InventoryTable({ records }: Props) {
                   className="rounded-full px-2.5 py-1 text-xs font-medium"
                   style={{
                     backgroundColor:
-                      record.ubicationType === 'PICKING'
+                      record.locationType === 'PICKING'
                         ? 'var(--color-success-light)'
-                        : record.ubicationType === 'EN_PUERTA'
+                        : record.locationType === 'EN_PUERTA'
                           ? 'var(--color-warning-light)'
                           : 'var(--color-danger-light)',
 
                     color:
-                      record.ubicationType === 'PICKING'
+                      record.locationType === 'PICKING'
                         ? 'var(--color-success)'
-                        : record.ubicationType === 'EN_PUERTA'
+                        : record.locationType === 'EN_PUERTA'
                           ? 'var(--color-warning)'
                           : 'var(--color-danger)',
                   }}
                 >
-                  {getLocationLabel(record.ubicationType)}
+                  {getLocationLabel(record.locationType)}
                 </span>
               </td>
 

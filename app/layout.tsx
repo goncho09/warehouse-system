@@ -18,7 +18,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+          try {
+            const theme = localStorage.getItem("theme");
+            const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+            if (theme === "dark" || (!theme && systemDark)) {
+              document.documentElement.classList.add("dark");
+            }
+          } catch {}
+        `,
+          }}
+        />
+      </head>
+
       <body className={poppins.className}>{children}</body>
     </html>
   );

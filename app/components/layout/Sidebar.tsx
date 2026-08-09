@@ -9,6 +9,7 @@ import {
   Settings,
   PackagePlus,
   Boxes,
+  Container,
 } from 'lucide-react';
 
 const menuItems = [
@@ -23,14 +24,14 @@ const menuItems = [
     href: '/productos',
   },
   {
-    label: 'Categorías',
-    icon: Tags,
-    href: '/categorias',
+    label: 'CNT',
+    icon: Container,
+    href: '/cnt',
   },
   {
-    label: 'Inventario',
+    label: 'Stock',
     icon: Boxes,
-    href: '/inventario',
+    href: '/stock',
   },
   {
     label: 'Ubicaciones',

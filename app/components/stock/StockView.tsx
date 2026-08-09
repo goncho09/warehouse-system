@@ -3,17 +3,17 @@
 import { useMemo, useState } from 'react';
 import { Boxes, MapPin, PackageCheck } from 'lucide-react';
 
-import InventoryTable from './InventoryTable';
+import StockTable from './StockTable';
 
 import type { Product } from '@/types/Product';
-import type { InventoryRecord } from '@/types/Inventory';
+import type { StockRecord } from '@/types/Stock';
 
 type Props = {
   products: Product[];
-  inventory: InventoryRecord[];
+  stock: StockRecord[];
 };
 
-export default function InventoryView({ products, inventory }: Props) {
+export default function StockView({ products, stock }: Props) {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     products[0]?.id ?? null,
   );
@@ -23,18 +23,18 @@ export default function InventoryView({ products, inventory }: Props) {
   );
 
   const records = useMemo(
-    () => inventory.filter((record) => record.productId === selectedProductId),
-    [inventory, selectedProductId],
+    () => stock.filter((record) => record.productId === selectedProductId),
+    [stock, selectedProductId],
   );
 
   const totalStock = records.reduce((total, record) => total + record.count, 0);
 
   const pickingStock = records
-    .filter((record) => record.ubicationType === 'PICKING')
+    .filter((record) => record.locationType === 'PICKING')
     .reduce((total, record) => total + record.count, 0);
 
   const pendingStock = records
-    .filter((record) => record.ubicationType === 'EN_PUERTA')
+    .filter((record) => record.locationType === 'EN_PUERTA')
     .reduce((total, record) => total + record.count, 0);
 
   return (
@@ -183,7 +183,7 @@ export default function InventoryView({ products, inventory }: Props) {
             </div>
           </section>
 
-          <InventoryTable records={records} />
+          <StockTable records={records} />
         </>
       )}
     </main>

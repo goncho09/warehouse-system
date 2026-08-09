@@ -1,4 +1,5 @@
 import { Bell } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
   return (
@@ -32,6 +33,10 @@ export default function Header() {
             style={{ backgroundColor: 'var(--color-primary)' }}
           />
         </button>
+
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+        </div>
 
         <div className="flex items-center gap-3">
           <div
