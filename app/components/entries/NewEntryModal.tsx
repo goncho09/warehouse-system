@@ -1,14 +1,17 @@
 'use client';
 
-import { X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { Product } from '@/types/Product';
 import { EntryFormData } from '@/types/Entry';
+import { CNT } from '@/types/CNT';
+
+import { X } from 'lucide-react';
 
 type Props = {
   isOpen: boolean;
   products: Product[];
+  cnts: CNT[];
   onClose: () => void;
   onCreate: (data: EntryFormData) => void;
 };
@@ -25,6 +28,7 @@ const initialFormData: EntryFormData = {
 export default function EntryModal({
   isOpen,
   products,
+  cnts,
   onClose,
   onCreate,
 }: Props) {
@@ -38,6 +42,10 @@ export default function EntryModal({
 
   const selectedProduct = products.find(
     (product) => product.barCode === barCode.trim(),
+  );
+
+  const selectedCNT = cnts.find(
+    (cnt) => cnt.id.toLowerCase() === formData.cntId.trim().toLowerCase(),
   );
 
   if (!isOpen) return null;
@@ -129,6 +137,35 @@ export default function EntryModal({
       return;
     }
 
+    if (!selectedCNT) {
+      alert('El CNT ingresado no existe.');
+      return;
+    }
+
+    if (selectedCNT.status !== 'ACTIVO') {
+      alert('El CNT está finalizado y no puede recibir mercadería.');
+      return;
+    }
+
+    if (selectedCNT.locationType !== 'EN_PUERTA') {
+      alert('El CNT no está disponible para recepción.');
+      return;
+    }
+
+    const existingProduct = selectedCNT.items.find(
+      (item) => item.productId === formData.productId,
+    );
+
+    if (
+      existingProduct &&
+      existingProduct.lot.toLowerCase() !== formData.lot.trim().toLowerCase()
+    ) {
+      alert(
+        `Este producto ya existe en el CNT con el lote ${existingProduct.lot}.`,
+      );
+      return;
+    }
+
     onCreate(formData);
     setFormData(initialFormData);
     setBarCode('');
@@ -148,6 +185,7 @@ export default function EntryModal({
     borderColor: 'var(--color-border)',
     backgroundColor: 'var(--color-surface)',
     color: 'var(--color-text)',
+    colorScheme: 'dark light',
   };
 
   return (
@@ -278,11 +316,10 @@ export default function EntryModal({
                 id="dueDate"
                 name="dueDate"
                 type="date"
-                min={minimumDueDate}
                 required
                 value={formData.dueDate}
                 onChange={handleChange}
-                className={inputClass}
+                className={`${inputClass} scheme-light dark:scheme-dark`}
                 style={inputStyle}
               />
 
@@ -323,7 +360,11 @@ export default function EntryModal({
             </div>
 
             <div>
-              <label htmlFor="cntId" className="mb-2 block text-sm font-medium">
+              <label
+                htmlFor="cntId"
+                className="mb-2 block text-sm font-medium"
+                style={{ color: 'var(--color-text)' }}
+              >
                 CNT
               </label>
 
@@ -333,33 +374,57 @@ export default function EntryModal({
                 required
                 value={formData.cntId}
                 onChange={handleChange}
+                placeholder="Escanear o ingresar CNT..."
                 className={inputClass}
                 style={inputStyle}
               />
+
+              {formData.cntId && selectedCNT && (
+                <p
+                  className="mt-2 text-xs"
+                  style={{
+                    color:
+                      selectedCNT.status === 'ACTIVO'
+                        ? 'var(--color-success)'
+                        : 'var(--color-danger)',
+                  }}
+                >
+                  {selectedCNT.status === 'ACTIVO'
+                    ? `CNT válido · ${selectedCNT.locationCode}`
+                    : 'Este CNT está finalizado'}
+                </p>
+              )}
+
+              {formData.cntId && !selectedCNT && (
+                <p
+                  className="mt-2 text-xs"
+                  style={{ color: 'var(--color-danger)' }}
+                >
+                  No existe ningún CNT con ese código.
+                </p>
+              )}
             </div>
 
-            <div className="md:col-span-2">
-              <div
-                className="rounded-lg border px-4 py-3"
-                style={{
-                  borderColor: 'var(--color-primary-light)',
-                  backgroundColor: 'var(--color-primary-hover)',
-                }}
+            <div
+              className="rounded-lg border px-4 py-3 md:col-span-2"
+              style={{
+                borderColor: 'var(--color-primary)',
+                backgroundColor: 'var(--color-primary-light)',
+              }}
+            >
+              <p
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-primary-dark)' }}
               >
-                <p
-                  className="text-sm font-medium"
-                  style={{ color: 'var(--color-primary-dark)' }}
-                >
-                  Ubicación inicial: En puerta
-                </p>
+                Ubicación inicial: En puerta
+              </p>
 
-                <p
-                  className="mt-1 text-xs"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  El CNT deberá ubicarse posteriormente para quedar disponible.
-                </p>
-              </div>
+              <p
+                className="mt-1 text-xs"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                El CNT deberá ubicarse posteriormente para quedar disponible.
+              </p>
             </div>
           </div>
 

@@ -8,6 +8,8 @@ import EntriesTable from './EntriesTable';
 
 import type { EntryFormData, Entry } from '@/types/Entry';
 import type { Product } from '@/types/Product';
+import type { CNT } from '@/types/CNT';
+import { cnts as initialCNTs } from '@/data/cnts';
 
 type Props = {
   products: Product[];
@@ -15,7 +17,29 @@ type Props = {
 
 export default function EntriesView({ products }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [cntList, setCntList] = useState<CNT[]>(initialCNTs);
+  const [generatedCNT, setGeneratedCNT] = useState<CNT | null>(null);
+
+  function handleGenerateCNT() {
+    const maxNumber = cntList.reduce((max, cnt) => {
+      const number = Number(cnt.id.replace('CNT-', ''));
+
+      return Number.isNaN(number) ? max : Math.max(max, number);
+    }, 10000);
+
+    const newCNT: CNT = {
+      id: `CNT-${maxNumber + 1}`,
+      status: 'ACTIVO',
+      locationCode: 'ZEP001',
+      locationType: 'EN_PUERTA',
+      items: [],
+    };
+
+    setCntList((previous) => [...previous, newCNT]);
+    setGeneratedCNT(newCNT);
+  }
 
   function handleCreateEntry(data: EntryFormData) {
     const newEntry: Entry = {
@@ -29,10 +53,53 @@ export default function EntriesView({ products }: Props) {
     };
 
     setEntries((previous) => [newEntry, ...previous]);
+
+    setCntList((previous) =>
+      previous.map((cnt) => {
+        if (cnt.id !== data.cntId) {
+          return cnt;
+        }
+
+        const existingItem = cnt.items.find(
+          (item) =>
+            item.productId === data.productId &&
+            item.lot.toLowerCase() === data.lot.toLowerCase(),
+        );
+
+        if (existingItem) {
+          return {
+            ...cnt,
+            items: cnt.items.map((item) =>
+              item.productId === data.productId &&
+              item.lot.toLowerCase() === data.lot.toLowerCase()
+                ? {
+                    ...item,
+                    count: item.count + Number(data.count),
+                  }
+                : item,
+            ),
+          };
+        }
+
+        return {
+          ...cnt,
+          items: [
+            ...cnt.items,
+            {
+              productId: data.productId,
+              lot: data.lot,
+              dueDate: data.dueDate,
+              count: Number(data.count),
+            },
+          ],
+        };
+      }),
+    );
   }
 
   return (
     <main className="p-6 md:p-8">
+      <div className="flex items-center gap-3"></div>
       <div className="mb-6 flex items-center justify-between">
         <div>
           <p
@@ -50,17 +117,32 @@ export default function EntriesView({ products }: Props) {
           </h1>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          style={{
-            backgroundColor: 'var(--color-primary)',
-          }}
-        >
-          <PackagePlus size={18} />
-          Registrar ingreso
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleGenerateCNT}
+            className="flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-(--color-surface-hover)"
+            style={{
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text)',
+              backgroundColor: 'var(--color-surface)',
+            }}
+          >
+            Generar CNT
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            style={{
+              backgroundColor: 'var(--color-primary)',
+            }}
+          >
+            <PackagePlus size={18} />
+            Registrar ingreso
+          </button>
+        </div>
       </div>
 
       <EntriesTable entries={entries} products={products} />
@@ -68,9 +150,84 @@ export default function EntriesView({ products }: Props) {
       <NewEntryModal
         isOpen={isModalOpen}
         products={products}
+        cnts={cntList}
         onClose={() => setIsModalOpen(false)}
         onCreate={handleCreateEntry}
       />
+
+      {generatedCNT && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            className="w-full max-w-md rounded-xl border p-6"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <p
+              className="text-sm font-medium"
+              style={{ color: 'var(--color-success)' }}
+            >
+              CNT generado correctamente
+            </p>
+
+            <h2
+              className="mt-2 text-2xl font-semibold"
+              style={{ color: 'var(--color-text)' }}
+            >
+              {generatedCNT.id}
+            </h2>
+
+            <div className="mt-5 space-y-3 text-sm">
+              <p>
+                <span style={{ color: 'var(--color-text-secondary)' }}>
+                  Estado:
+                </span>{' '}
+                Activo
+              </p>
+
+              <p>
+                <span style={{ color: 'var(--color-text-secondary)' }}>
+                  Ubicación:
+                </span>{' '}
+                {generatedCNT.locationCode}
+              </p>
+
+              <p>
+                <span style={{ color: 'var(--color-text-secondary)' }}>
+                  Tipo:
+                </span>{' '}
+                En puerta
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="rounded-lg border px-4 py-2.5 text-sm font-medium"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text)',
+                }}
+              >
+                Imprimir etiqueta
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setGeneratedCNT(null)}
+                className="rounded-lg px-4 py-2.5 text-sm font-medium text-white"
+                style={{
+                  backgroundColor: 'var(--color-primary)',
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
