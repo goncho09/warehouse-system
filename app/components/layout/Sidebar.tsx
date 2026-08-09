@@ -58,16 +58,16 @@ export default function Sidebar() {
         backgroundColor: 'var(--color-dark)',
       }}
     >
-      {/* Logo */}
       <div className="flex h-16 items-center border-b px-6">
-        <div
+        <a
           className="flex h-9 w-9 items-center justify-center rounded-lg"
           style={{
             backgroundColor: 'var(--color-primary)',
           }}
+          href="/"
         >
           <Package size={20} color="white" strokeWidth={2} />
-        </div>
+        </a>
 
         <div className="ml-3">
           <p className="text-sm font-semibold text-white">Depósito Central</p>
