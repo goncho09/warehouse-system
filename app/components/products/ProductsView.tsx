@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 
 import ProductsTable from './ProductsTable';
 import NewProductModal from './NewProductModal';
+
 import type { Product } from '@/types/Product';
 
 type Props = {

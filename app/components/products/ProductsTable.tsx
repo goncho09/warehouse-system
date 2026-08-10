@@ -14,8 +14,7 @@ type SortColumn =
   | 'barCode'
   | 'description'
   | 'category'
-  | 'unitsPerDisplay'
-  | 'stock';
+  | 'unitsPerDisplay';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -25,7 +24,6 @@ type Filters = {
   description: string;
   category: string;
   unitsPerDisplay: string;
-  stock: string;
 };
 
 const initialFilters: Filters = {
@@ -34,7 +32,6 @@ const initialFilters: Filters = {
   description: '',
   category: '',
   unitsPerDisplay: '',
-  stock: '',
 };
 
 function matchesText(value: string, search: string) {
@@ -120,16 +117,7 @@ export default function ProductsTable({ products }: Props) {
         !filters.unitsPerDisplay ||
         product.unitsPerDisplay === Number(filters.unitsPerDisplay);
 
-      const matchesStock =
-        !filters.stock || product.stock === Number(filters.stock);
-
-      return (
-        matchesCode &&
-        matchesName &&
-        matchesCategory &&
-        matchesDisplay &&
-        matchesStock
-      );
+      return matchesCode && matchesName && matchesCategory && matchesDisplay;
     });
 
     if (sortRules.length === 0) {
@@ -245,17 +233,6 @@ export default function ProductsTable({ products }: Props) {
                   <SortIcon column="category" />
                 </button>
               </th>
-
-              <th className="p-4 text-left">
-                <button
-                  onClick={() => handleSort('stock')}
-                  className="flex items-center gap-2 text-xs font-medium uppercase"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Stock
-                  <SortIcon column="stock" />
-                </button>
-              </th>
             </tr>
 
             <tr
@@ -327,21 +304,6 @@ export default function ProductsTable({ products }: Props) {
                   <option value="REFRIGERADO">Refrigerado</option>
                 </select>
               </th>
-
-              <th className="p-4">
-                <input
-                  type="number"
-                  value={filters.stock}
-                  onChange={(event) =>
-                    handleFilterChange('stock', event.target.value)
-                  }
-                  placeholder="96"
-                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                  }}
-                />
-              </th>
             </tr>
           </thead>
 
@@ -374,16 +336,6 @@ export default function ProductsTable({ products }: Props) {
 
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="flex h-9 w-9 items-center justify-center rounded-lg"
-                      style={{
-                        backgroundColor: 'var(--color-primary-light)',
-                        color: 'var(--color-primary)',
-                      }}
-                    >
-                      <Package size={18} />
-                    </div>
-
                     <span
                       className="text-sm font-medium"
                       style={{ color: 'var(--color-text)' }}
@@ -400,18 +352,6 @@ export default function ProductsTable({ products }: Props) {
                   }}
                 >
                   {product.category}
-                </td>
-
-                <td
-                  className="px-4 py-4 text-sm font-medium"
-                  style={{
-                    color:
-                      product.stock === 0
-                        ? 'var(--color-danger)'
-                        : 'var(--color-text)',
-                  }}
-                >
-                  {product.stock}
                 </td>
               </tr>
             ))}

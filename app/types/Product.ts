@@ -1,10 +1,12 @@
 export type ProductCategory = 'FOOD' | 'NO_FOOD' | 'CONGELADO' | 'REFRIGERADO';
 
 export interface Product {
-  id: string;
+  id: number;
+  productId: string;
   barCode: string;
   description: string;
   category: ProductCategory;
   unitsPerDisplay: number;
-  stock: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

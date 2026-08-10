@@ -1,7 +1,9 @@
 'use client';
 
-import { X } from 'lucide-react';
 import { useState } from 'react';
+import { X } from 'lucide-react';
+
+import { createProduct } from '@/actions/products';
 
 type ProductModalProps = {
   isOpen: boolean;
@@ -13,13 +15,11 @@ export default function NewProductModal({
   onClose,
 }: ProductModalProps) {
   const [formData, setFormData] = useState({
-    codigoProducto: '',
-    codigoBarras: '',
-    descripcion: '',
-    categoria: 'FOOD',
-    unidadesPorDisplay: '',
-    lote: '',
-    vencimiento: '',
+    productId: '',
+    barCode: '',
+    description: '',
+    category: 'FOOD',
+    unitsPerDisplay: '',
   });
 
   if (!isOpen) return null;
@@ -37,10 +37,35 @@ export default function NewProductModal({
     }));
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    onClose();
+    try {
+      await createProduct({
+        productId: formData.productId,
+        barCode: formData.barCode,
+        description: formData.description,
+        category: formData.category as
+          | 'FOOD'
+          | 'NO_FOOD'
+          | 'CONGELADO'
+          | 'REFRIGERADO',
+        unitsPerDisplay: Number(formData.unitsPerDisplay),
+      });
+
+      setFormData({
+        productId: '',
+        barCode: '',
+        description: '',
+        category: 'FOOD',
+        unitsPerDisplay: '',
+      });
+
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert('No se pudo crear el producto.');
+    }
   }
 
   return (
@@ -88,7 +113,7 @@ export default function NewProductModal({
             {/* Código producto */}
             <div>
               <label
-                htmlFor="codigoProducto"
+                htmlFor="productId"
                 className="mb-2 block text-sm font-medium"
                 style={{ color: 'var(--color-text)' }}
               >
@@ -96,11 +121,11 @@ export default function NewProductModal({
               </label>
 
               <input
-                id="codigoProducto"
-                name="codigoProducto"
+                id="productId"
+                name="productId"
                 type="text"
                 required
-                value={formData.codigoProducto}
+                value={formData.productId}
                 onChange={handleChange}
                 placeholder="Ej: PRD-1006"
                 className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
@@ -114,7 +139,7 @@ export default function NewProductModal({
             {/* Código de barras */}
             <div>
               <label
-                htmlFor="codigoBarras"
+                htmlFor="barCode"
                 className="mb-2 block text-sm font-medium"
                 style={{ color: 'var(--color-text)' }}
               >
@@ -122,11 +147,11 @@ export default function NewProductModal({
               </label>
 
               <input
-                id="codigoBarras"
-                name="codigoBarras"
+                id="barCode"
+                name="barCode"
                 type="text"
                 required
-                value={formData.codigoBarras}
+                value={formData.barCode}
                 onChange={handleChange}
                 placeholder="Ej: 7731234567890"
                 className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
@@ -140,7 +165,7 @@ export default function NewProductModal({
             {/* Descripción */}
             <div className="md:col-span-2">
               <label
-                htmlFor="descripcion"
+                htmlFor="description"
                 className="mb-2 block text-sm font-medium"
                 style={{ color: 'var(--color-text)' }}
               >
@@ -148,11 +173,11 @@ export default function NewProductModal({
               </label>
 
               <input
-                id="descripcion"
-                name="descripcion"
+                id="description"
+                name="description"
                 type="text"
                 required
-                value={formData.descripcion}
+                value={formData.description}
                 onChange={handleChange}
                 placeholder="Ej: Red Bull Energy Drink 250ml"
                 className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
@@ -166,7 +191,7 @@ export default function NewProductModal({
             {/* Categoría */}
             <div>
               <label
-                htmlFor="categoria"
+                htmlFor="category"
                 className="mb-2 block text-sm font-medium"
                 style={{ color: 'var(--color-text)' }}
               >
@@ -174,9 +199,9 @@ export default function NewProductModal({
               </label>
 
               <select
-                id="categoria"
-                name="categoria"
-                value={formData.categoria}
+                id="category"
+                name="category"
+                value={formData.category}
                 onChange={handleChange}
                 className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"
                 style={{
@@ -194,7 +219,7 @@ export default function NewProductModal({
             {/* Unidades por display */}
             <div>
               <label
-                htmlFor="unidadesPorDisplay"
+                htmlFor="unitsPerDisplay"
                 className="mb-2 block text-sm font-medium"
                 style={{ color: 'var(--color-text)' }}
               >
@@ -202,12 +227,12 @@ export default function NewProductModal({
               </label>
 
               <input
-                id="unidadesPorDisplay"
-                name="unidadesPorDisplay"
+                id="unitsPerDisplay"
+                name="unitsPerDisplay"
                 type="number"
                 min="1"
                 required
-                value={formData.unidadesPorDisplay}
+                value={formData.unitsPerDisplay}
                 onChange={handleChange}
                 placeholder="Ej: 24"
                 className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none"

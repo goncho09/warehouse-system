@@ -1,6 +1,13 @@
-import ProductsView from '@/components/products/ProductsView';
-import { products } from '@/data/products';
+import { prisma } from '@/lib/prisma';
 
-export default function ProductsPage() {
+import ProductsView from '@/components/products/ProductsView';
+
+export default async function ProductsPage() {
+  const products = await prisma.product.findMany({
+    orderBy: {
+      description: 'asc',
+    },
+  });
+
   return <ProductsView products={products} />;
 }
