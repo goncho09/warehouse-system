@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductCategory {
+  FOOD
+  NO_FOOD
+  CONGELADO
+  REFRIGERADO
+}
+
+enum CNTStatus {
+  ACTIVO
+  FINALIZADO
+}
+
+enum LocationType {
+  PICKING
+  EN_PUERTA
+  FLOTANTE
+  AVERIAS
+}
+
+model Product {
+  id              Int             @id @default(autoincrement())
+  productId       String          @unique
+  barCode         String          @unique
+  description     String
+  category        ProductCategory
+  unitsPerDisplay Int
+
+  cntItems CNTItem[]
+  entries  Entry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Location {
+  code String       @id
+  type LocationType
+
+  chamber  String?
+  row      String?
+  position String?
+  height   String?
+
+  cnts CNT[]
+
+  createdAt DateTime @default(now())
+}
+
+model CNT {
+  id String @id
+
+  status CNTStatus @default(ACTIVO)
+
+  locationCode String
+  location     Location @relation(fields: [locationCode], references: [code])
+
+  items   CNTItem[]
+  entries Entry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CNTItem {
+  id Int @id @default(autoincrement())
+
+  cntId String
+  cnt   CNT    @relation(fields: [cntId], references: [id], onDelete: Cascade)
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  lot     String
+  dueDate DateTime
+  count   Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cntId, productId])
+  @@index([productId])
+}
+
+model Entry {
+  id Int @id @default(autoincrement())
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  cntId String
+  cnt   CNT    @relation(fields: [cntId], references: [id])
+
+  lot     String
+  dueDate DateTime
+  count   Int
+
+  entryDate DateTime @default(now())
+
+  @@index([productId])
+  @@index([cntId])
+}
