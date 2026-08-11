@@ -5,40 +5,48 @@ import { PackagePlus } from 'lucide-react';
 
 import NewEntryModal from './NewEntryModal';
 import EntriesTable from './EntriesTable';
+import { createCNT } from '@/actions/cnts';
 
 import type { EntryFormData, Entry } from '@/types/Entry';
 import type { Product } from '@/types/Product';
 import type { CNT } from '@/types/CNT';
-import { cnts as initialCNTs } from '@/data/cnts';
 
 type Props = {
   products: Product[];
+  cnts: CNT[];
 };
 
-export default function EntriesView({ products }: Props) {
+export default function EntriesView({ products, cnts }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [cntList, setCntList] = useState<CNT[]>(initialCNTs);
+  const [cntList, setCntList] = useState<CNT[]>(cnts);
   const [generatedCNT, setGeneratedCNT] = useState<CNT | null>(null);
 
-  function handleGenerateCNT() {
-    const maxNumber = cntList.reduce((max, cnt) => {
-      const number = Number(cnt.id.replace('CNT-', ''));
+  async function handleGenerateCNT() {
+    try {
+      const newCNT = await createCNT();
 
-      return Number.isNaN(number) ? max : Math.max(max, number);
-    }, 10000);
+      if (!newCNT.locationCode || !newCNT.location) {
+        throw new Error('El CNT se creó sin ubicación.');
+      }
 
-    const newCNT: CNT = {
-      id: `CNT-${maxNumber + 1}`,
-      status: 'ACTIVO',
-      locationCode: 'ZEP001',
-      locationType: 'EN_PUERTA',
-      items: [],
-    };
+      const frontendCNT: CNT = {
+        id: newCNT.id,
+        code: newCNT.code,
+        status: newCNT.status,
+        locationCode: newCNT.locationCode,
+        locationType: newCNT.location.type,
+        items: [],
+      };
 
-    setCntList((previous) => [...previous, newCNT]);
-    setGeneratedCNT(newCNT);
+      setGeneratedCNT(frontendCNT);
+
+      setCntList((previous) => [...previous, frontendCNT]);
+    } catch (error) {
+      console.error(error);
+      alert('No se pudo generar el CNT.');
+    }
   }
 
   function handleCreateEntry(data: EntryFormData) {
@@ -48,7 +56,7 @@ export default function EntriesView({ products }: Props) {
       lot: data.lot,
       dueDate: data.dueDate,
       count: Number(data.count),
-      cntId: data.cntId,
+      cntId: data.cntCode,
       entryDate: new Date().toISOString(),
     };
 
@@ -56,7 +64,7 @@ export default function EntriesView({ products }: Props) {
 
     setCntList((previous) =>
       previous.map((cnt) => {
-        if (cnt.id !== data.cntId) {
+        if (cnt.code !== data.cntCode) {
           return cnt;
         }
 
@@ -175,7 +183,7 @@ export default function EntriesView({ products }: Props) {
               className="mt-2 text-2xl font-semibold"
               style={{ color: 'var(--color-text)' }}
             >
-              {generatedCNT.id}
+              {generatedCNT.code}
             </h2>
 
             <div className="mt-5 space-y-3 text-sm">

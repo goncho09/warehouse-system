@@ -9,25 +9,7 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // UBICACIONES ESPECIALES
-
-  await prisma.location.upsert({
-    where: { code: 'ZEP001' },
-    update: {},
-    create: {
-      code: 'ZEP001',
-      type: 'EN_PUERTA',
-    },
-  });
-
-  await prisma.location.upsert({
-    where: { code: 'PUE001' },
-    update: {},
-    create: {
-      code: 'PUE001',
-      type: 'FLOTANTE',
-    },
-  });
+  // AVERIAS
 
   await prisma.location.upsert({
     where: { code: '160A0910101' },

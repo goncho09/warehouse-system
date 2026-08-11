@@ -10,7 +10,8 @@ export interface CNTItem {
 }
 
 export interface CNT {
-  id: string;
+  id: number;
+  code: string;
   status: CNTStatus;
   locationCode: string;
   locationType: LocationType;

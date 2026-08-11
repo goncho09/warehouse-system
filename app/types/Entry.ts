@@ -14,5 +14,5 @@ export type EntryFormData = {
   lot: string;
   dueDate: string;
   count: string;
-  cntId: string;
+  cntCode: string;
 };

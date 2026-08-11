@@ -57,12 +57,13 @@ model Location {
 }
 
 model CNT {
-  id String @id
+  id   Int    @id @default(autoincrement())
+  code String @unique
 
   status CNTStatus @default(ACTIVO)
 
-  locationCode String
-  location     Location @relation(fields: [locationCode], references: [code])
+  locationCode String? 
+  location Location? @relation(fields: [locationCode], references: [code])
 
   items   CNTItem[]
   entries Entry[]
@@ -73,8 +74,9 @@ model CNT {
 
 model CNTItem {
   id Int @id @default(autoincrement())
+  code String @unique
 
-  cntId String
+  cntId Int
   cnt   CNT    @relation(fields: [cntId], references: [id], onDelete: Cascade)
 
   productId Int
@@ -97,7 +99,7 @@ model Entry {
   productId Int
   product   Product @relation(fields: [productId], references: [id])
 
-  cntId String
+  cntId Int
   cnt   CNT    @relation(fields: [cntId], references: [id])
 
   lot     String

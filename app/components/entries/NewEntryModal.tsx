@@ -22,7 +22,7 @@ const initialFormData: EntryFormData = {
   lot: '',
   dueDate: '',
   count: '',
-  cntId: '',
+  cntCode: '',
 };
 
 export default function EntryModal({
@@ -45,7 +45,7 @@ export default function EntryModal({
   );
 
   const selectedCNT = cnts.find(
-    (cnt) => cnt.id.toLowerCase() === formData.cntId.trim().toLowerCase(),
+    (cnt) => cnt.code.toLowerCase() === formData.cntCode.trim().toLowerCase(),
   );
 
   if (!isOpen) return null;
@@ -96,7 +96,7 @@ export default function EntryModal({
     setFormData((previous) => ({
       ...previous,
       barCode: value,
-      productId: product?.id ?? '',
+      productId: product?.productId ?? '',
     }));
   }
 
@@ -361,7 +361,7 @@ export default function EntryModal({
 
             <div>
               <label
-                htmlFor="cntId"
+                htmlFor="cntCode"
                 className="mb-2 block text-sm font-medium"
                 style={{ color: 'var(--color-text)' }}
               >
@@ -369,17 +369,17 @@ export default function EntryModal({
               </label>
 
               <input
-                id="cntId"
-                name="cntId"
+                id="cntCode"
+                name="cntCode"
                 required
-                value={formData.cntId}
+                value={formData.cntCode}
                 onChange={handleChange}
                 placeholder="Escanear o ingresar CNT..."
                 className={inputClass}
                 style={inputStyle}
               />
 
-              {formData.cntId && selectedCNT && (
+              {formData.cntCode && selectedCNT && (
                 <p
                   className="mt-2 text-xs"
                   style={{
@@ -395,7 +395,7 @@ export default function EntryModal({
                 </p>
               )}
 
-              {formData.cntId && !selectedCNT && (
+              {formData.cntCode && !selectedCNT && (
                 <p
                   className="mt-2 text-xs"
                   style={{ color: 'var(--color-danger)' }}
