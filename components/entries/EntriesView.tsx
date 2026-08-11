@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 
 import NewEntryModal from './NewEntryModal';
 import EntriesTable from './EntriesTable';
-import { createCNT } from '@/actions/cnts';
-import { createEntry } from '@/actions/entries';
+import { createCNT } from '@/app/actions/cnts';
+import { createEntry } from '@/app/actions/entries';
 
 import type { EntryFormData, Entry } from '@/types/Entry';
 import type { Product } from '@/types/Product';
