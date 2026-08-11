@@ -39,7 +39,9 @@ export default function CNTItemsTable({ items, products }: Props) {
               color: 'var(--color-text-muted)',
             }}
           >
-            <th className="px-5 py-4 font-medium">Producto</th>
+            <th className="px-5 py-4 font-medium">Código</th>
+            <th className="px-5 py-4 font-medium">Código de barras</th>
+            <th className="px-5 py-4 font-medium">Descripción</th>
             <th className="px-5 py-4 font-medium">Lote</th>
             <th className="px-5 py-4 font-medium">Vencimiento</th>
             <th className="px-5 py-4 font-medium">Cantidad</th>
@@ -49,7 +51,7 @@ export default function CNTItemsTable({ items, products }: Props) {
         <tbody>
           {items.map((item) => {
             const product = products.find(
-              (product) => String(product.id) === item.productId,
+              (product) => product.productId === item.productId,
             );
 
             return (
@@ -60,27 +62,23 @@ export default function CNTItemsTable({ items, products }: Props) {
                   borderColor: 'var(--color-border-light)',
                 }}
               >
-                <td className="px-5 py-4">
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {product?.description ?? 'Producto no encontrado'}
-                  </p>
+                <td className="px-5 py-4">{item.productId}</td>
 
-                  <p
-                    className="mt-0.5 text-xs"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {product?.productId}
-                  </p>
+                <td className="px-5 py-4 text-sm">{product?.barCode}</td>
+
+                <td className="px-5 py-4 text-sm">
+                  {product?.description ?? 'Producto no encontrado'}
                 </td>
 
                 <td className="px-5 py-4 text-sm">{item.lot}</td>
 
-                <td className="px-5 py-4 text-sm">{item.dueDate}</td>
+                <td className="px-5 py-4 text-sm">
+                  {item.dueDate
+                    ? new Date(`${item.dueDate}T00:00:00`).toLocaleDateString(
+                        'es-UY',
+                      )
+                    : 'N/A'}
+                </td>
 
                 <td className="px-5 py-4 text-sm font-medium">{item.count}</td>
               </tr>

@@ -45,6 +45,7 @@ export default function EntriesTable({ entries, products }: Props) {
               <th className="px-5 py-4 font-medium">Product ID</th>
               <th className="px-5 py-4 font-medium">Lote</th>
               <th className="px-5 py-4 font-medium">Código de barras</th>
+              <th className="px-5 py-4 font-medium">Descripción</th>
               <th className="px-5 py-4 font-medium">Vencimiento</th>
               <th className="px-5 py-4 font-medium">Cantidad</th>
               <th className="px-5 py-4 font-medium">Contenedor</th>
@@ -55,7 +56,7 @@ export default function EntriesTable({ entries, products }: Props) {
           <tbody>
             {entries.map((entry) => {
               const product = products.find(
-                (product) => product.id === entry.productId,
+                (product) => product.productId === entry.productId,
               );
 
               return (
@@ -97,6 +98,15 @@ export default function EntriesTable({ entries, products }: Props) {
                       color: 'var(--color-text-secondary)',
                     }}
                   >
+                    {product?.description ?? 'N/A'}
+                  </td>
+
+                  <td
+                    className="px-5 py-4 text-sm"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                    }}
+                  >
                     {entry.dueDate
                       ? new Date(
                           `${entry.dueDate}T00:00:00`,
@@ -115,7 +125,7 @@ export default function EntriesTable({ entries, products }: Props) {
                     className="px-5 py-4 text-sm font-medium"
                     style={{ color: 'var(--color-text)' }}
                   >
-                    {entry.cntId}
+                    {entry.cntCode}
                   </td>
 
                   <td

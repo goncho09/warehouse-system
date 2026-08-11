@@ -47,7 +47,7 @@ export default function CNTView({ cnts, products }: Props) {
       return;
     }
 
-    const foundCNT = cnts.find((cnt) => cnt.id.toLowerCase() === value);
+    const foundCNT = cnts.find((cnt) => cnt.code.toLowerCase() === value);
 
     setSelectedCNT(foundCNT ?? null);
     setNotFound(!foundCNT);

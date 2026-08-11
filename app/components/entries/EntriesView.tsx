@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { PackagePlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import NewEntryModal from './NewEntryModal';
 import EntriesTable from './EntriesTable';
 import { createCNT } from '@/actions/cnts';
+import { createEntry } from '@/actions/entries';
 
 import type { EntryFormData, Entry } from '@/types/Entry';
 import type { Product } from '@/types/Product';
@@ -14,14 +16,16 @@ import type { CNT } from '@/types/CNT';
 type Props = {
   products: Product[];
   cnts: CNT[];
+  entries: Entry[];
 };
 
-export default function EntriesView({ products, cnts }: Props) {
+export default function EntriesView({ products, cnts, entries }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [entries, setEntries] = useState<Entry[]>([]);
   const [cntList, setCntList] = useState<CNT[]>(cnts);
   const [generatedCNT, setGeneratedCNT] = useState<CNT | null>(null);
+
+  const router = useRouter();
 
   async function handleGenerateCNT() {
     try {
@@ -49,60 +53,28 @@ export default function EntriesView({ products, cnts }: Props) {
     }
   }
 
-  function handleCreateEntry(data: EntryFormData) {
-    const newEntry: Entry = {
-      id: Date.now(),
-      productId: data.productId,
-      lot: data.lot,
-      dueDate: data.dueDate,
-      count: Number(data.count),
-      cntId: data.cntCode,
-      entryDate: new Date().toISOString(),
-    };
+  async function handleCreateEntry(data: EntryFormData) {
+    try {
+      await createEntry({
+        productId: data.productId,
+        lot: data.lot,
+        dueDate: data.dueDate,
+        count: Number(data.count),
+        cntCode: data.cntCode,
+      });
 
-    setEntries((previous) => [newEntry, ...previous]);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
 
-    setCntList((previous) =>
-      previous.map((cnt) => {
-        if (cnt.code !== data.cntCode) {
-          return cnt;
-        }
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo registrar el ingreso.',
+      );
 
-        const existingItem = cnt.items.find(
-          (item) =>
-            item.productId === data.productId &&
-            item.lot.toLowerCase() === data.lot.toLowerCase(),
-        );
-
-        if (existingItem) {
-          return {
-            ...cnt,
-            items: cnt.items.map((item) =>
-              item.productId === data.productId &&
-              item.lot.toLowerCase() === data.lot.toLowerCase()
-                ? {
-                    ...item,
-                    count: item.count + Number(data.count),
-                  }
-                : item,
-            ),
-          };
-        }
-
-        return {
-          ...cnt,
-          items: [
-            ...cnt.items,
-            {
-              productId: data.productId,
-              lot: data.lot,
-              dueDate: data.dueDate,
-              count: Number(data.count),
-            },
-          ],
-        };
-      }),
-    );
+      throw error;
+    }
   }
 
   return (

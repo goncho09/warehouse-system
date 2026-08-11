@@ -4,7 +4,7 @@ export interface Entry {
   lot: string;
   dueDate: string;
   count: number;
-  cntId: string;
+  cntCode: string;
   entryDate: string;
 }
 

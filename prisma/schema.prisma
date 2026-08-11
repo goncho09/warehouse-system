@@ -74,7 +74,6 @@ model CNT {
 
 model CNTItem {
   id Int @id @default(autoincrement())
-  code String @unique
 
   cntId Int
   cnt   CNT    @relation(fields: [cntId], references: [id], onDelete: Cascade)
