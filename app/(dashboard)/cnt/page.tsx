@@ -1,8 +1,20 @@
 import CNTView from '@/components/CNT/CNTView';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@/app/generated/prisma/client';
 
 import type { CNT } from '@/types/CNT';
 import type { Product } from '@/types/Product';
+
+type DBCNT = Prisma.CNTGetPayload<{
+  include: {
+    location: true;
+    items: {
+      include: {
+        product: true;
+      };
+    };
+  };
+}>;
 
 export default async function CNTPage() {
   const dbProducts = await prisma.product.findMany({
@@ -11,23 +23,21 @@ export default async function CNTPage() {
     },
   });
 
-  const dbCNTs = await prisma.cNT.findMany({
+  const dbCNTs: DBCNT[] = await prisma.cNT.findMany({
     include: {
       location: true,
-
       items: {
         include: {
           product: true,
         },
       },
     },
-
     orderBy: {
       code: 'asc',
     },
   });
 
-  const products: Product[] = dbProducts.map((product) => ({
+  const products: Product[] = dbProducts.map((product: Product) => ({
     id: product.id,
     productId: product.productId,
     barCode: product.barCode,

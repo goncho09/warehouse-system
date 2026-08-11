@@ -1,8 +1,8 @@
-export type LocationType = 'PICKING' | 'EN_PUERTA' | 'AVERIAS';
+import type { LocationType } from '@/types/Location';
 
 export interface StockRecord {
   id: number;
-  productId: number;
+  productId: string;
   locationCode: string;
   locationType: LocationType;
   count: number;

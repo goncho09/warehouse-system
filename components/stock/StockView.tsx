@@ -17,7 +17,7 @@ export default function StockView({ products, stock }: Props) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null,
   );
 
@@ -48,13 +48,16 @@ export default function StockView({ products, stock }: Props) {
   }, [search]);
 
   const selectedProduct = products.find(
-    (product) => product.id === selectedProductId,
+    (product) => product.productId === selectedProductId,
   );
 
-  const records = useMemo(
-    () => stock.filter((record) => record.productId === selectedProductId),
-    [stock, selectedProductId],
-  );
+  const records = useMemo(() => {
+    if (!selectedProduct) return [];
+
+    return stock.filter(
+      (record) => record.productId === selectedProduct.productId,
+    );
+  }, [stock, selectedProduct]);
 
   const totalStock = records.reduce((total, record) => total + record.count, 0);
 
@@ -64,6 +67,14 @@ export default function StockView({ products, stock }: Props) {
 
   const pendingStock = records
     .filter((record) => record.locationType === 'EN_PUERTA')
+    .reduce((total, record) => total + record.count, 0);
+
+  const floatingStock = records
+    .filter((record) => record.locationType === 'FLOTANTE')
+    .reduce((total, record) => total + record.count, 0);
+
+  const damagedStock = records
+    .filter((record) => record.locationType === 'AVERIAS')
     .reduce((total, record) => total + record.count, 0);
 
   return (
@@ -145,7 +156,7 @@ export default function StockView({ products, stock }: Props) {
                     key={product.id}
                     type="button"
                     onClick={() => {
-                      setSelectedProductId(product.id);
+                      setSelectedProductId(product.productId);
                       setSearch(product.description);
                     }}
                     className="
