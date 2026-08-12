@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { createProduct } from '@/actions/products';
+// import { createProduct } from '@/actions/products';
 
 type ProductModalProps = {
   isOpen: boolean;
@@ -41,17 +42,17 @@ export default function NewProductModal({
     event.preventDefault();
 
     try {
-      await createProduct({
-        productId: formData.productId,
-        barCode: formData.barCode,
-        description: formData.description,
-        category: formData.category as
-          | 'FOOD'
-          | 'NO_FOOD'
-          | 'CONGELADO'
-          | 'REFRIGERADO',
-        unitsPerDisplay: Number(formData.unitsPerDisplay),
-      });
+      //   await createProduct({
+      //     productId: formData.productId,
+      //     barCode: formData.barCode,
+      //     description: formData.description,
+      //     category: formData.category as
+      //       | 'FOOD'
+      //       | 'NO_FOOD'
+      //       | 'CONGELADO'
+      //       | 'REFRIGERADO',
+      //     unitsPerDisplay: Number(formData.unitsPerDisplay),
+      //   });
 
       setFormData({
         productId: '',
@@ -64,7 +65,12 @@ export default function NewProductModal({
       onClose();
     } catch (error) {
       console.error(error);
-      alert('No se pudo crear el producto.');
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo crear el producto.',
+      );
     }
   }
 

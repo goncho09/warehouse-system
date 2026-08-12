@@ -12,6 +12,7 @@ import { createEntry } from '@/app/actions/entries';
 import type { EntryFormData, Entry } from '@/types/Entry';
 import type { Product } from '@/types/Product';
 import type { CNT } from '@/types/CNT';
+import { toast } from 'sonner';
 
 type Props = {
   products: Product[];
@@ -49,7 +50,9 @@ export default function EntriesView({ products, cnts, entries }: Props) {
       setCntList((previous) => [...previous, frontendCNT]);
     } catch (error) {
       console.error(error);
-      alert('No se pudo generar el CNT.');
+      toast.error(
+        error instanceof Error ? error.message : 'No se pudo generar el CNT.',
+      );
     }
   }
 
@@ -67,7 +70,7 @@ export default function EntriesView({ products, cnts, entries }: Props) {
     } catch (error) {
       console.error(error);
 
-      alert(
+      toast.error(
         error instanceof Error
           ? error.message
           : 'No se pudo registrar el ingreso.',

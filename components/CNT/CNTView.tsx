@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   MapPin,
@@ -11,13 +12,17 @@ import {
 } from 'lucide-react';
 
 import CNTItemsTable from './CNTItemsTable';
+import MoveCNTModal from './MoveCNTModal';
 
 import type { CNT } from '@/types/CNT';
 import type { Product } from '@/types/Product';
+import { Location } from '@/types/Location';
+import { moveCNT } from '@/app/actions/cnts';
 
 type Props = {
   cnts: CNT[];
   products: Product[];
+  locations: Location[];
 };
 
 function getLocationLabel(type: CNT['locationType']) {
@@ -33,10 +38,13 @@ function getLocationLabel(type: CNT['locationType']) {
   }
 }
 
-export default function CNTView({ cnts, products }: Props) {
+export default function CNTView({ cnts, products, locations }: Props) {
   const [search, setSearch] = useState('');
   const [selectedCNT, setSelectedCNT] = useState<CNT | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+
+  const router = useRouter();
 
   function handleSearch() {
     const value = search.trim().toLowerCase();
@@ -57,6 +65,35 @@ export default function CNTView({ cnts, products }: Props) {
     if (event.key === 'Enter') {
       handleSearch();
     }
+  }
+
+  async function handleMoveCNT(cntCode: string, targetLocationCode: string) {
+    const updated = await moveCNT(cntCode, targetLocationCode);
+
+    if (!updated.locationCode || !updated.location) {
+      throw new Error('El CNT quedó sin ubicación.');
+    }
+
+    const updatedCNT: CNT = {
+      id: updated.id,
+      code: updated.code,
+      status: updated.status,
+      locationCode: updated.locationCode,
+      locationType: updated.location.type,
+
+      items: updated.items.map((item) => ({
+        productId: String(item.productId),
+        lot: item.lot,
+        dueDate: item.dueDate.toISOString().slice(0, 10),
+        count: item.count,
+      })),
+    };
+
+    setSelectedCNT(updatedCNT);
+
+    router.refresh();
+
+    return updatedCNT;
   }
 
   const totalUnits =
@@ -146,22 +183,6 @@ export default function CNTView({ cnts, products }: Props) {
       {selectedCNT && (
         <>
           <section className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <p
-                className="text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Unidad logística
-              </p>
-
-              <h2
-                className="mt-1 text-xl font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
-                {selectedCNT.id}
-              </h2>
-            </div>
-
             <span
               className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium"
               style={{
@@ -183,6 +204,20 @@ export default function CNTView({ cnts, products }: Props) {
 
               {selectedCNT.status === 'ACTIVO' ? 'Activo' : 'Finalizado'}
             </span>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCNT(selectedCNT);
+                setIsMoveModalOpen(true);
+              }}
+              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+              }}
+            >
+              Mover CNT
+            </button>
           </section>
 
           {/* Resumen */}
@@ -316,6 +351,16 @@ export default function CNTView({ cnts, products }: Props) {
           </section>
         </>
       )}
+
+      <MoveCNTModal
+        isOpen={isMoveModalOpen}
+        cnt={selectedCNT}
+        locations={locations}
+        onClose={() => {
+          setIsMoveModalOpen(false);
+        }}
+        onMove={handleMoveCNT}
+      />
     </main>
   );
 }

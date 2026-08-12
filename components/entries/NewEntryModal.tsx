@@ -7,6 +7,7 @@ import { EntryFormData } from '@/types/Entry';
 import { CNT } from '@/types/CNT';
 
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Props = {
   isOpen: boolean;
@@ -37,8 +38,6 @@ export default function EntryModal({
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const minimumDueDate = tomorrow.toISOString().split('T')[0];
 
   const selectedProduct = products.find(
     (product) => product.barCode === barCode.trim(),
@@ -118,39 +117,29 @@ export default function EntryModal({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    // Ya se muestra el error debajo del código de barras
     if (!selectedProduct) {
-      alert(
-        'No se ha seleccionado un producto válido. Por favor, escanee o ingrese un código de barras válido.',
-      );
       return;
     }
 
     const count = Number(formData.count);
 
     if (!Number.isInteger(count) || count < 1) {
-      alert('La cantidad debe ser mayor a 0.');
+      toast.error('Cantidad inválida', {
+        description: 'La cantidad debe ser mayor a 0.',
+      });
       return;
     }
 
     if (daysUntilDueDate === null || daysUntilDueDate <= 0) {
-      alert('La fecha de vencimiento debe ser posterior a hoy.');
       return;
     }
 
-    if (!selectedCNT) {
-      alert('El CNT ingresado no existe.');
-      return;
-    }
+    if (!selectedCNT) return;
 
-    if (selectedCNT.status !== 'ACTIVO') {
-      alert('El CNT está finalizado y no puede recibir mercadería.');
-      return;
-    }
+    if (selectedCNT.status !== 'ACTIVO') return;
 
-    if (selectedCNT.locationType !== 'EN_PUERTA') {
-      alert('El CNT no está disponible para recepción.');
-      return;
-    }
+    if (selectedCNT.locationType !== 'EN_PUERTA') return;
 
     const existingProduct = selectedCNT.items.find(
       (item) => item.productId === formData.productId,
@@ -160,13 +149,14 @@ export default function EntryModal({
       existingProduct &&
       existingProduct.lot.toLowerCase() !== formData.lot.trim().toLowerCase()
     ) {
-      alert(
-        `Este producto ya existe en el CNT con el lote ${existingProduct.lot}.`,
-      );
+      toast.error('Lote incompatible', {
+        description: `El producto ya existe en el CNT con el lote "${existingProduct.lot}".`,
+      });
       return;
     }
 
     onCreate(formData);
+
     setFormData(initialFormData);
     setBarCode('');
     onClose();
@@ -384,14 +374,17 @@ export default function EntryModal({
                   className="mt-2 text-xs"
                   style={{
                     color:
-                      selectedCNT.status === 'ACTIVO'
+                      selectedCNT.status === 'ACTIVO' &&
+                      selectedCNT.locationType === 'EN_PUERTA'
                         ? 'var(--color-success)'
-                        : 'var(--color-danger)',
+                        : 'var(--color-warning)',
                   }}
                 >
-                  {selectedCNT.status === 'ACTIVO'
-                    ? `CNT válido · ${selectedCNT.locationCode}`
-                    : 'Este CNT está finalizado'}
+                  {selectedCNT.status !== 'ACTIVO'
+                    ? 'CNT finalizado'
+                    : selectedCNT.locationType !== 'EN_PUERTA'
+                      ? `CNT no disponible para recepción · ${selectedCNT.locationCode}`
+                      : `CNT válido · ${selectedCNT.locationCode}`}
                 </p>
               )}
 
@@ -434,7 +427,7 @@ export default function EntryModal({
           >
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="rounded-lg border px-4 py-2.5 text-sm font-medium"
               style={{
                 borderColor: 'var(--color-border)',
