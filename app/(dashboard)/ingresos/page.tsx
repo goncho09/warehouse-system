@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import EntriesView from '@/components/entries/EntriesView';
 import { prisma } from '@/lib/prisma';
 

@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, refresh } from 'next/cache';
 
 import { createEntryRecord, type CreateEntryData } from '@/services/entry';
 
@@ -10,6 +10,8 @@ export async function createEntry(data: CreateEntryData) {
   revalidatePath('/ingresos');
   revalidatePath('/cnt');
   revalidatePath('/stock');
+
+  refresh();
 
   return result;
 }

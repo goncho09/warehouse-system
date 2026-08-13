@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { PackagePlus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import NewEntryModal from './NewEntryModal';
 import EntriesTable from './EntriesTable';
@@ -25,8 +24,6 @@ export default function EntriesView({ products, cnts, entries }: Props) {
 
   const [cntList, setCntList] = useState<CNT[]>(cnts);
   const [generatedCNT, setGeneratedCNT] = useState<CNT | null>(null);
-
-  const router = useRouter();
 
   async function handleGenerateCNT() {
     try {
@@ -66,7 +63,9 @@ export default function EntriesView({ products, cnts, entries }: Props) {
         cntCode: data.cntCode,
       });
 
-      router.refresh();
+      toast.success('Ingreso registrado', {
+        description: 'La mercadería se registró correctamente.',
+      });
     } catch (error) {
       console.error(error);
 

@@ -108,9 +108,12 @@ export default function EntriesTable({ entries, products }: Props) {
                     }}
                   >
                     {entry.dueDate
-                      ? new Date(
-                          `${entry.dueDate}T00:00:00`,
-                        ).toLocaleDateString()
+                      ? new Intl.DateTimeFormat('es-UY', {
+                          timeZone: 'America/Montevideo',
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        }).format(new Date(`${entry.dueDate}T00:00:00`))
                       : 'N/A'}
                   </td>
 
@@ -134,7 +137,16 @@ export default function EntriesTable({ entries, products }: Props) {
                       color: 'var(--color-text-secondary)',
                     }}
                   >
-                    {new Date(entry.entryDate).toLocaleString()}
+                    {new Intl.DateTimeFormat('es-UY', {
+                      timeZone: 'America/Montevideo',
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false,
+                    }).format(new Date(entry.entryDate))}
                   </td>
                 </tr>
               );

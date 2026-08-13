@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import StockView from '@/components/stock/StockView';
 import { prisma } from '@/lib/prisma';
 

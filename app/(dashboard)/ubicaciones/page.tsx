@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import LocationsView from '@/components/locations/LocationsView';
 import type { Location } from '@/types/Location';
 

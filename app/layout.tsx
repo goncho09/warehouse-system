@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
+
 import './globals.css';
 
 const poppins = Poppins({
@@ -9,8 +10,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'Depósito Central',
-  description: 'Sistema de gestión del depósito central',
+  title: 'Warehouse System',
+  description: 'Sistema de gestión de depósito',
 };
 
 export default function RootLayout({
@@ -24,21 +25,27 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-          try {
-            const theme = localStorage.getItem("theme");
-            const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              try {
+                const theme = localStorage.getItem('theme');
 
-            if (theme === "dark" || (!theme && systemDark)) {
-              document.documentElement.classList.add("dark");
-            }
-          } catch {}
-        `,
+                if (
+                  theme === 'dark' ||
+                  (!theme &&
+                    window.matchMedia('(prefers-color-scheme: dark)').matches)
+                ) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch {}
+            `,
           }}
         />
       </head>
 
       <body className={poppins.className}>
         {children}
+
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>

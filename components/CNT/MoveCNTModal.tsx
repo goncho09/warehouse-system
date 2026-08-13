@@ -63,8 +63,9 @@ export default function MoveCNTModal({
       const updatedCNT = await onMove(currentCNT.code, targetLocationCode);
 
       setCurrentCNT(updatedCNT);
-      setTargetLocationCode('');
       toast.success(`${updatedCNT.code} movido a ${updatedCNT.locationCode}.`);
+
+      onClose();
     } catch (error) {
       console.error(error);
 

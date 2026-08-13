@@ -14,7 +14,7 @@ type Props = {
   products: Product[];
   cnts: CNT[];
   onClose: () => void;
-  onCreate: (data: EntryFormData) => void;
+  onCreate: (data: EntryFormData) => Promise<void>;
 };
 
 const initialFormData: EntryFormData = {
@@ -114,7 +114,7 @@ export default function EntryModal({
 
   const daysUntilDueDate = getDaysUntilDueDate(formData.dueDate);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     // Ya se muestra el error debajo del código de barras
@@ -155,7 +155,7 @@ export default function EntryModal({
       return;
     }
 
-    onCreate(formData);
+    await onCreate(formData);
 
     setFormData(initialFormData);
     setBarCode('');

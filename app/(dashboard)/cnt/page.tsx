@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import CNTView from '@/components/CNT/CNTView';
 import { prisma } from '@/lib/prisma';
 

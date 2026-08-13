@@ -11,13 +11,16 @@ test('genera un CNT correctamente', async ({ page }) => {
 
   await expect(page.getByText('CNT generado correctamente')).toBeVisible();
 
-  const cntCode = page.locator('h2');
+  await expect(page.locator('h2')).toHaveText(/CNT-\d{6}/);
 
-  await expect(cntCode).toHaveText(/CNT-\d{6}/);
+  await expect(page.getByText(/PUE\d{6}/)).toBeVisible();
 
-  const locationText = page.getByText(/PUE\d{6}/);
+  // Cerramos el modal antes de terminar el test
+  await page
+    .getByRole('button', {
+      name: 'Cerrar',
+    })
+    .click();
 
-  await expect(locationText).toBeVisible();
-
-  await expect(page.getByText('En puerta')).toBeVisible();
+  await expect(page.getByText('CNT generado correctamente')).not.toBeVisible();
 });

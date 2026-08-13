@@ -13,10 +13,11 @@ export default function ThemeToggle() {
   function toggleTheme() {
     const newDarkMode = !darkMode;
 
-    setDarkMode(newDarkMode);
     document.documentElement.classList.toggle('dark', newDarkMode);
 
     localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
+
+    setDarkMode(newDarkMode);
   }
 
   return (
