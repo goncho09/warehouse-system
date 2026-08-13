@@ -208,8 +208,8 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="relative overflow-x-auto">
+            <table className="w-full min-w-max">
               <thead>
                 <tr
                   className="border-b text-left text-xs uppercase"

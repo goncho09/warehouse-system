@@ -13,7 +13,7 @@ export default function StockTable({ records }: Props) {
         borderColor: 'var(--color-border)',
       }}
     >
-      <table className="w-full">
+      <table className="w-full min-w-max">
         <thead>
           <tr
             className="border-b text-left text-xs uppercase"
@@ -22,10 +22,18 @@ export default function StockTable({ records }: Props) {
               color: 'var(--color-text-muted)',
             }}
           >
-            <th className="px-5 py-4 font-medium">Ubicación</th>
-            <th className="px-5 py-4 font-medium">Tipo</th>
-            <th className="px-5 py-4 font-medium">Cantidad</th>
-            <th className="px-5 py-4 font-medium">Vencimiento</th>
+            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+              Ubicación
+            </th>
+            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+              Tipo
+            </th>
+            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+              Cantidad
+            </th>
+            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+              Vencimiento
+            </th>
           </tr>
         </thead>
 
@@ -42,11 +50,13 @@ export default function StockTable({ records }: Props) {
                 {record.locationCode}
               </td>
 
-              <td className="px-5 py-4 text-sm">{record.locationType}</td>
+              <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
+                {record.locationType}
+              </td>
 
               <td className="px-5 py-4 text-sm font-medium">{record.count}</td>
 
-              <td className="px-5 py-4 text-sm">
+              <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
                 {record.dueDate
                   ? new Date(`${record.dueDate}T00:00:00`).toLocaleDateString(
                       'es-UY',

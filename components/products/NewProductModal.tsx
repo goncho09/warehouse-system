@@ -1,27 +1,32 @@
 'use client';
 
+'use client';
+
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
-// import { createProduct } from '@/actions/products';
+import { createProduct } from '@/app/actions/products';
 
 type ProductModalProps = {
   isOpen: boolean;
   onClose: () => void;
 };
 
+const initialFormData = {
+  productId: '',
+  barCode: '',
+  description: '',
+  category: 'FOOD',
+  unitsPerDisplay: '',
+};
+
 export default function NewProductModal({
   isOpen,
   onClose,
 }: ProductModalProps) {
-  const [formData, setFormData] = useState({
-    productId: '',
-    barCode: '',
-    description: '',
-    category: 'FOOD',
-    unitsPerDisplay: '',
-  });
+  const [formData, setFormData] = useState(initialFormData);
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
 
@@ -41,27 +46,28 @@ export default function NewProductModal({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    try {
-      //   await createProduct({
-      //     productId: formData.productId,
-      //     barCode: formData.barCode,
-      //     description: formData.description,
-      //     category: formData.category as
-      //       | 'FOOD'
-      //       | 'NO_FOOD'
-      //       | 'CONGELADO'
-      //       | 'REFRIGERADO',
-      //     unitsPerDisplay: Number(formData.unitsPerDisplay),
-      //   });
+    const unitsPerDisplay = Number(formData.unitsPerDisplay);
 
-      setFormData({
-        productId: '',
-        barCode: '',
-        description: '',
-        category: 'FOOD',
-        unitsPerDisplay: '',
+    try {
+      setIsSaving(true);
+
+      await createProduct({
+        productId: formData.productId,
+        barCode: formData.barCode,
+        description: formData.description,
+        category: formData.category as
+          | 'FOOD'
+          | 'NO_FOOD'
+          | 'CONGELADO'
+          | 'REFRIGERADO',
+        unitsPerDisplay,
       });
 
+      toast.success('Producto creado', {
+        description: `${formData.description} se guardó correctamente.`,
+      });
+
+      setFormData(initialFormData);
       onClose();
     } catch (error) {
       console.error(error);
@@ -71,13 +77,20 @@ export default function NewProductModal({
           ? error.message
           : 'No se pudo crear el producto.',
       );
+    } finally {
+      setIsSaving(false);
     }
   }
 
+  function handleClose() {
+    setFormData(initialFormData);
+    onClose();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
       <div
-        className="w-full max-w-2xl rounded-xl border"
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-xl border"
         style={{
           backgroundColor: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
@@ -85,7 +98,7 @@ export default function NewProductModal({
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between border-b px-6 py-4"
+          className="flex items-center justify-between border-b px-4 py-4 sm:px-6"
           style={{ borderColor: 'var(--color-border)' }}
         >
           <div>
@@ -106,7 +119,7 @@ export default function NewProductModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-lg p-2"
             style={{ color: 'var(--color-text-secondary)' }}
           >
@@ -115,7 +128,7 @@ export default function NewProductModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-6 md:grid-cols-2">
             {/* Código producto */}
             <div>
               <label
@@ -252,13 +265,13 @@ export default function NewProductModal({
 
           {/* Footer */}
           <div
-            className="flex justify-end gap-3 border-t px-6 py-4"
+            className="flex flex-col-reverse gap-3 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-6"
             style={{ borderColor: 'var(--color-border)' }}
           >
             <button
               type="button"
-              onClick={onClose}
-              className="rounded-lg border px-4 py-2.5 text-sm font-medium"
+              onClick={handleClose}
+              className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto"
               style={{
                 borderColor: 'var(--color-border)',
                 color: 'var(--color-text-secondary)',
@@ -269,12 +282,13 @@ export default function NewProductModal({
 
             <button
               type="submit"
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white"
+              disabled={isSaving}
+              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               style={{
                 backgroundColor: 'var(--color-primary)',
               }}
             >
-              Guardar producto
+              {isSaving ? 'Guardando...' : 'Guardar producto'}
             </button>
           </div>
         </form>

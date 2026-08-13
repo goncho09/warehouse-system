@@ -278,13 +278,13 @@ export default function LocationModal({
           </div>
 
           <div
-            className="flex justify-end gap-3 border-t px-6 py-4"
+            className="flex flex-col-reverse gap-3 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-6"
             style={{ borderColor: 'var(--color-border)' }}
           >
             <button
               type="button"
               onClick={handleClose}
-              className="rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-(--color-surface-hover)"
+              className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto"
               style={{
                 borderColor: 'var(--color-border)',
                 color: 'var(--color-text-secondary)',
@@ -295,8 +295,10 @@ export default function LocationModal({
 
             <button
               type="submit"
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: 'var(--color-primary)' }}
+              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white sm:w-auto"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+              }}
             >
               Crear ubicación
             </button>

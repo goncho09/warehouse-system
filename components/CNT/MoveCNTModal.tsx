@@ -179,15 +179,13 @@ export default function MoveCNTModal({
           </div>
 
           <div
-            className="flex justify-end gap-3 border-t px-6 py-4"
-            style={{
-              borderColor: 'var(--color-border)',
-            }}
+            className="flex flex-col-reverse gap-3 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-6"
+            style={{ borderColor: 'var(--color-border)' }}
           >
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border px-4 py-2.5 text-sm font-medium"
+              className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto"
               style={{
                 borderColor: 'var(--color-border)',
                 color: 'var(--color-text-secondary)',
@@ -198,8 +196,8 @@ export default function MoveCNTModal({
 
             <button
               type="submit"
+              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white sm:w-auto"
               disabled={isMoving}
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
               style={{
                 backgroundColor: 'var(--color-primary)',
               }}

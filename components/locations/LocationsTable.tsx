@@ -26,8 +26,8 @@ export default function LocationsTable({ locations }: Props) {
         borderColor: 'var(--color-border)',
       }}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="relative overflow-x-auto">
+        <table className="w-full min-w-max">
           <thead>
             <tr
               className="border-b text-left text-xs uppercase"
@@ -36,12 +36,24 @@ export default function LocationsTable({ locations }: Props) {
                 color: 'var(--color-text-muted)',
               }}
             >
-              <th className="px-5 py-4 font-medium">Código</th>
-              <th className="px-5 py-4 font-medium">Tipo</th>
-              <th className="px-5 py-4 font-medium">Cámara</th>
-              <th className="px-5 py-4 font-medium">Fila</th>
-              <th className="px-5 py-4 font-medium">Posición</th>
-              <th className="px-5 py-4 font-medium">Altura</th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Código
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Tipo
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Cámara
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Fila
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Posición
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Altura
+              </th>
             </tr>
           </thead>
 
@@ -83,15 +95,15 @@ export default function LocationsTable({ locations }: Props) {
                   </span>
                 </td>
 
-                <td className="px-5 py-4 text-sm">{location.chamber ?? '-'}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">{location.chamber ?? '-'}</td>
 
-                <td className="px-5 py-4 text-sm">{location.row ?? '-'}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">{location.row ?? '-'}</td>
 
-                <td className="px-5 py-4 text-sm">
+                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
                   {location.position ?? '-'}
                 </td>
 
-                <td className="px-5 py-4 text-sm">{location.height ?? '-'}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">{location.height ?? '-'}</td>
               </tr>
             ))}
           </tbody>

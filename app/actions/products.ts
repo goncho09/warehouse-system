@@ -1,28 +1,20 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, refresh } from 'next/cache';
 
-type CreateProductData = {
-  productId: string;
-  barCode: string;
-  description: string;
-  category: 'FOOD' | 'NO_FOOD' | 'CONGELADO' | 'REFRIGERADO';
-  unitsPerDisplay: number;
-};
+import {
+  createProductRecord,
+  type CreateProductData,
+} from '@/services/product';
 
 export async function createProduct(data: CreateProductData) {
-  const product = await prisma.product.create({
-    data: {
-      productId: data.productId,
-      barCode: data.barCode,
-      description: data.description,
-      category: data.category,
-      unitsPerDisplay: data.unitsPerDisplay,
-    },
-  });
+  const product = await createProductRecord(data);
 
   revalidatePath('/productos');
+  revalidatePath('/ingresos');
+  revalidatePath('/stock');
+
+  refresh();
 
   return product;
 }

@@ -17,7 +17,7 @@ export default function ProductsView({ products }: Props) {
 
   return (
     <main className="p-6 md:p-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p
             className="mb-1 text-sm"

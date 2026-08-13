@@ -13,6 +13,9 @@ export type EntryFormData = {
   barCode: string;
   lot: string;
   dueDate: string;
-  count: string;
+
+  displays: string;
+  looseUnits: string;
+
   cntCode: string;
 };

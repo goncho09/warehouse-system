@@ -32,8 +32,8 @@ export default function EntriesTable({ entries, products }: Props) {
         borderColor: 'var(--color-border)',
       }}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="relative overflow-x-auto">
+        <table className="w-full min-w-max">
           <thead>
             <tr
               className="border-b text-left text-xs uppercase"
@@ -42,14 +42,30 @@ export default function EntriesTable({ entries, products }: Props) {
                 color: 'var(--color-text-muted)',
               }}
             >
-              <th className="px-5 py-4 font-medium">Product ID</th>
-              <th className="px-5 py-4 font-medium">Lote</th>
-              <th className="px-5 py-4 font-medium">Código de barras</th>
-              <th className="px-5 py-4 font-medium">Descripción</th>
-              <th className="px-5 py-4 font-medium">Vencimiento</th>
-              <th className="px-5 py-4 font-medium">Cantidad</th>
-              <th className="px-5 py-4 font-medium">Contenedor</th>
-              <th className="px-5 py-4 font-medium">Fecha ingreso</th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Product ID
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Lote
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Código de barras
+              </th>
+              <th className="min-w-56 px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Descripción
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Vencimiento
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Cantidad
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Contenedor
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Fecha ingreso
+              </th>
             </tr>
           </thead>
 

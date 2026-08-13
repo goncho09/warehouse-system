@@ -1,46 +1,73 @@
-import { Bell } from 'lucide-react';
+'use client';
+
+import { Bell, Menu } from 'lucide-react';
+
 import ThemeToggle from './ThemeToggle';
 
-export default function Header() {
+type Props = {
+  onOpenSidebar: () => void;
+};
+
+export default function Header({ onOpenSidebar }: Props) {
   return (
     <header
-      className="flex h-16 items-center justify-between border-b px-6"
+      className="flex h-16 items-center justify-between border-b px-4 sm:px-6"
       style={{
         backgroundColor: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
     >
-      <div>
+      <div className="flex min-w-0 items-center gap-3">
+        <button
+          type="button"
+          onClick={onOpenSidebar}
+          aria-label="Abrir menú"
+          className="
+            flex h-9 w-9 shrink-0 items-center justify-center
+            rounded-lg
+            transition-colors
+            hover:bg-(--color-primary-light)
+            md:hidden
+          "
+          style={{
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          <Menu size={21} />
+        </button>
+
         <h1
-          className="text-lg font-semibold"
+          className="truncate text-base font-semibold sm:text-lg"
           style={{ color: 'var(--color-text)' }}
         >
           Depósito Central
         </h1>
       </div>
 
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-1 sm:gap-3 md:gap-5">
         <button
           type="button"
-          className="relative rounded-lg p-2 transition-colors"
-          style={{ color: 'var(--color-text-secondary)' }}
+          className="relative rounded-lg p-2 transition-colors hover:bg-(--color-primary-light)"
+          style={{
+            color: 'var(--color-text-secondary)',
+          }}
           aria-label="Notificaciones"
         >
           <Bell size={20} strokeWidth={1.8} />
 
           <span
             className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
-            style={{ backgroundColor: 'var(--color-primary)' }}
+            style={{
+              backgroundColor: 'var(--color-primary)',
+            }}
           />
         </button>
 
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-        </div>
+        <ThemeToggle />
 
         <div className="flex items-center gap-3">
           <div
-            className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
             style={{
               backgroundColor: 'var(--color-primary-light)',
               color: 'var(--color-primary-dark)',
@@ -49,7 +76,7 @@ export default function Header() {
             G
           </div>
 
-          <div className="hidden sm:block">
+          <div className="hidden lg:block">
             <p
               className="text-sm font-medium"
               style={{ color: 'var(--color-text)' }}
@@ -59,7 +86,9 @@ export default function Header() {
 
             <p
               className="text-xs"
-              style={{ color: 'var(--color-text-secondary)' }}
+              style={{
+                color: 'var(--color-text-secondary)',
+              }}
             >
               Operador
             </p>

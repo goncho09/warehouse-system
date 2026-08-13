@@ -55,16 +55,30 @@ export default function EntriesView({ products, cnts, entries }: Props) {
 
   async function handleCreateEntry(data: EntryFormData) {
     try {
+      const product = products.find(
+        (product) => product.productId === data.productId,
+      );
+
+      if (!product) {
+        throw new Error('El producto no existe.');
+      }
+
+      const totalCount =
+        Number(data.displays) * product.unitsPerDisplay +
+        Number(data.looseUnits);
+
       await createEntry({
         productId: data.productId,
         lot: data.lot,
         dueDate: data.dueDate,
-        count: Number(data.count),
+        count: totalCount,
         cntCode: data.cntCode,
       });
 
       toast.success('Ingreso registrado', {
-        description: 'La mercadería se registró correctamente.',
+        description: `${totalCount} ${
+          totalCount === 1 ? 'unidad registrada' : 'unidades registradas'
+        }.`,
       });
     } catch (error) {
       console.error(error);
@@ -82,7 +96,7 @@ export default function EntriesView({ products, cnts, entries }: Props) {
   return (
     <main className="p-6 md:p-8">
       <div className="flex items-center gap-3"></div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p
             className="mb-1 text-sm"

@@ -110,6 +110,8 @@ export default function ProductsTable({ products }: Props) {
 
       const matchesName = matchesText(product.description, filters.description);
 
+      const matchesBarCode = matchesText(product.barCode, filters.barCode);
+
       const matchesCategory =
         !filters.category || product.category === filters.category;
 
@@ -117,7 +119,13 @@ export default function ProductsTable({ products }: Props) {
         !filters.unitsPerDisplay ||
         product.unitsPerDisplay === Number(filters.unitsPerDisplay);
 
-      return matchesCode && matchesName && matchesCategory && matchesDisplay;
+      return (
+        matchesCode &&
+        matchesName &&
+        matchesCategory &&
+        matchesDisplay &&
+        matchesBarCode
+      );
     });
 
     if (sortRules.length === 0) {
@@ -183,8 +191,8 @@ export default function ProductsTable({ products }: Props) {
         borderColor: 'var(--color-border)',
       }}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="relative overflow-x-auto">
+        <table className="w-full min-w-max">
           <thead>
             <tr
               className="border-b"
@@ -212,7 +220,7 @@ export default function ProductsTable({ products }: Props) {
                 </button>
               </th>
 
-              <th className="p-4 text-left">
+              <th className="min-w-56 px-3 py-3 font-medium sm:px-5 sm:py-4">
                 <button
                   onClick={() => handleSort('description')}
                   className="flex items-center gap-2 text-xs font-medium uppercase"
@@ -220,6 +228,17 @@ export default function ProductsTable({ products }: Props) {
                 >
                   Descripción
                   <SortIcon column="description" />
+                </button>
+              </th>
+
+              <th className="p-4 text-left">
+                <button
+                  onClick={() => handleSort('unitsPerDisplay')}
+                  className="flex items-center gap-2 text-xs font-medium uppercase"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  Display
+                  <SortIcon column="unitsPerDisplay" />
                 </button>
               </th>
 
@@ -285,6 +304,23 @@ export default function ProductsTable({ products }: Props) {
               </th>
 
               <th className="p-4">
+                <input
+                  type="number"
+                  min="1"
+                  value={filters.unitsPerDisplay}
+                  onChange={(event) =>
+                    handleFilterChange('unitsPerDisplay', event.target.value)
+                  }
+                  placeholder="Unidades"
+                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
+                  style={{
+                    borderColor: 'var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                    color: 'var(--color-text)',
+                  }}
+                />
+              </th>
+              <th className="p-4">
                 <select
                   value={filters.category}
                   onChange={(event) =>
@@ -345,6 +381,14 @@ export default function ProductsTable({ products }: Props) {
                   </div>
                 </td>
 
+                <td
+                  className="px-4 py-4 text-sm"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  {product.unitsPerDisplay}
+                </td>
                 <td
                   className="px-4 py-4 text-sm"
                   style={{

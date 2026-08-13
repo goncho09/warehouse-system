@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 
 import {
   canReceiveEntry,
-  hasCompatibleLot,
+  isCompatibleCNTItem,
   isValidEntryCount,
   parseDueDate,
 } from '@/lib/entry';
@@ -52,13 +52,28 @@ export async function createEntryRecord(data: CreateEntryData) {
     throw new Error('El CNT no se encuentra en puerta.');
   }
 
-  if (!hasCompatibleLot(cnt.items, product.id, data.lot)) {
+  if (!isCompatibleCNTItem(cnt.items, product.id, data.lot, data.dueDate)) {
     const existingItem = cnt.items.find(
       (item) => item.productId === product.id,
     );
 
+    if (!existingItem) {
+      throw new Error('El producto no es compatible con el CNT.');
+    }
+
+    const sameLot =
+      existingItem.lot.trim().toLowerCase() === data.lot.trim().toLowerCase();
+
+    if (!sameLot) {
+      throw new Error(
+        `El producto ya existe en este CNT con el lote ${existingItem.lot}.`,
+      );
+    }
+
+    const existingDueDate = existingItem.dueDate.toISOString().slice(0, 10);
+
     throw new Error(
-      `El producto ya existe en este CNT con el lote ${existingItem?.lot}.`,
+      `El producto ya existe en este CNT con vencimiento ${existingDueDate}.`,
     );
   }
 

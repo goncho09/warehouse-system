@@ -184,3 +184,40 @@ describe('createEntryRecord', () => {
     ).rejects.toThrow();
   });
 });
+
+it('rechaza otro vencimiento para el mismo producto y lote', async () => {
+  const product = await prisma.product.findUniqueOrThrow({
+    where: {
+      id: productDbId,
+    },
+  });
+
+  await createEntryRecord({
+    productId: product.productId,
+    lot: 'L123',
+    dueDate: '2099-12-20',
+    count: 12,
+    cntCode,
+  });
+
+  await expect(
+    createEntryRecord({
+      productId: product.productId,
+      lot: 'L123',
+      dueDate: '2099-12-21',
+      count: 6,
+      cntCode,
+    }),
+  ).rejects.toThrow(
+    'El producto ya existe en este CNT con vencimiento 2099-12-20.',
+  );
+
+  const item = await prisma.cNTItem.findFirstOrThrow({
+    where: {
+      cntId,
+      productId: product.id,
+    },
+  });
+
+  expect(item.count).toBe(12);
+});

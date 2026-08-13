@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  calculateTotalUnits,
   canReceiveEntry,
-  hasCompatibleLot,
+  isCompatibleCNTItem,
   isValidEntryCount,
+  isValidEntryQuantities,
   parseDueDate,
 } from '../lib/entry';
 
@@ -54,32 +56,37 @@ describe('CNT para recepción', () => {
   });
 });
 
-describe('Lotes de productos', () => {
+describe('Compatibilidad de producto dentro del CNT', () => {
   const items = [
     {
       productId: 1,
       lot: 'L123',
+      dueDate: new Date('2026-08-29T00:00:00'),
     },
   ];
 
   it('acepta un producto que todavía no existe en el CNT', () => {
-    expect(hasCompatibleLot(items, 2, 'L999')).toBe(true);
+    expect(isCompatibleCNTItem(items, 2, 'L999', '2026-09-10')).toBe(true);
   });
 
-  it('acepta el mismo producto con el mismo lote', () => {
-    expect(hasCompatibleLot(items, 1, 'L123')).toBe(true);
+  it('acepta el mismo producto con el mismo lote y vencimiento', () => {
+    expect(isCompatibleCNTItem(items, 1, 'L123', '2026-08-29')).toBe(true);
   });
 
   it('ignora mayúsculas y minúsculas del lote', () => {
-    expect(hasCompatibleLot(items, 1, 'l123')).toBe(true);
+    expect(isCompatibleCNTItem(items, 1, 'l123', '2026-08-29')).toBe(true);
   });
 
   it('ignora espacios al comparar lotes', () => {
-    expect(hasCompatibleLot(items, 1, '  L123  ')).toBe(true);
+    expect(isCompatibleCNTItem(items, 1, '  L123  ', '2026-08-29')).toBe(true);
   });
 
   it('rechaza el mismo producto con otro lote', () => {
-    expect(hasCompatibleLot(items, 1, 'L999')).toBe(false);
+    expect(isCompatibleCNTItem(items, 1, 'L999', '2026-08-29')).toBe(false);
+  });
+
+  it('rechaza el mismo producto y lote con otro vencimiento', () => {
+    expect(isCompatibleCNTItem(items, 1, 'L123', '2026-08-30')).toBe(false);
   });
 });
 
@@ -99,5 +106,81 @@ describe('Fecha de vencimiento', () => {
 
   it('rechaza una fecha vacía', () => {
     expect(parseDueDate('')).toBeNull();
+  });
+});
+
+describe('Displays y unidades', () => {
+  it('calcula el total correctamente', () => {
+    expect(calculateTotalUnits(3, 5, 24)).toBe(77);
+  });
+
+  it('permite ingresar solamente unidades sueltas', () => {
+    expect(calculateTotalUnits(0, 5, 24)).toBe(5);
+
+    expect(isValidEntryQuantities(0, 5, 24)).toBe(true);
+  });
+
+  it('permite ingresar solamente displays', () => {
+    expect(calculateTotalUnits(3, 0, 24)).toBe(72);
+
+    expect(isValidEntryQuantities(3, 0, 24)).toBe(true);
+  });
+
+  it('rechaza cero displays y cero unidades', () => {
+    expect(isValidEntryQuantities(0, 0, 24)).toBe(false);
+  });
+
+  it('rechaza cantidades negativas', () => {
+    expect(isValidEntryQuantities(-1, 0, 24)).toBe(false);
+
+    expect(isValidEntryQuantities(0, -1, 24)).toBe(false);
+  });
+
+  it('rechaza cantidades decimales', () => {
+    expect(isValidEntryQuantities(1.5, 0, 24)).toBe(false);
+
+    expect(isValidEntryQuantities(0, 2.5, 24)).toBe(false);
+  });
+
+  it('rechaza unidades sueltas iguales al tamaño del display', () => {
+    expect(isValidEntryQuantities(0, 24, 24)).toBe(false);
+  });
+
+  it('rechaza unidades sueltas mayores al tamaño del display', () => {
+    expect(isValidEntryQuantities(1, 30, 24)).toBe(false);
+  });
+
+  it('acepta como máximo display menos una unidad', () => {
+    expect(isValidEntryQuantities(0, 23, 24)).toBe(true);
+  });
+});
+
+describe('Compatibilidad de producto dentro del CNT', () => {
+  const items = [
+    {
+      productId: 1,
+      lot: 'L123',
+      dueDate: new Date('2026-08-29T00:00:00'),
+    },
+  ];
+
+  it('acepta un producto que todavía no existe', () => {
+    expect(isCompatibleCNTItem(items, 2, 'OTRO', '2026-09-10')).toBe(true);
+  });
+
+  it('acepta mismo producto, lote y vencimiento', () => {
+    expect(isCompatibleCNTItem(items, 1, 'L123', '2026-08-29')).toBe(true);
+  });
+
+  it('ignora mayúsculas y espacios del lote', () => {
+    expect(isCompatibleCNTItem(items, 1, '  l123  ', '2026-08-29')).toBe(true);
+  });
+
+  it('rechaza mismo producto con otro lote', () => {
+    expect(isCompatibleCNTItem(items, 1, 'L999', '2026-08-29')).toBe(false);
+  });
+
+  it('rechaza mismo producto y lote con otro vencimiento', () => {
+    expect(isCompatibleCNTItem(items, 1, 'L123', '2026-08-14')).toBe(false);
   });
 });

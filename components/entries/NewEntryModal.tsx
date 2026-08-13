@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import type { Product } from '@/types/Product';
 import { EntryFormData } from '@/types/Entry';
 import { CNT } from '@/types/CNT';
 
-import { X } from 'lucide-react';
-import { toast } from 'sonner';
+import { calculateTotalUnits, isValidEntryQuantities } from '@/lib/entry';
 
 type Props = {
   isOpen: boolean;
@@ -22,7 +23,8 @@ const initialFormData: EntryFormData = {
   barCode: '',
   lot: '',
   dueDate: '',
-  count: '',
+  displays: '0',
+  looseUnits: '0',
   cntCode: '',
 };
 
@@ -49,6 +51,16 @@ export default function EntryModal({
 
   if (!isOpen) return null;
 
+  const displays = Number(formData.displays || 0);
+  const looseUnits = Number(formData.looseUnits || 0);
+
+  const unitsPerDisplay = selectedProduct?.unitsPerDisplay ?? 0;
+
+  const invalidLooseUnits =
+    selectedProduct && looseUnits >= selectedProduct.unitsPerDisplay;
+
+  const totalCount = calculateTotalUnits(displays, looseUnits, unitsPerDisplay);
+
   function handleChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
@@ -60,26 +72,28 @@ export default function EntryModal({
     }));
   }
 
-  function handleCountChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const value = event.target.value;
-
+  function handleQuantityChange(
+    field: 'displays' | 'looseUnits',
+    value: string,
+  ) {
     if (value === '') {
       setFormData((previous) => ({
         ...previous,
-        count: '',
+        [field]: '',
       }));
+
       return;
     }
 
-    const count = Number(value);
+    const number = Number(value);
 
-    if (!Number.isInteger(count) || count < 1) {
+    if (!Number.isInteger(number) || number < 0) {
       return;
     }
 
     setFormData((previous) => ({
       ...previous,
-      count: value,
+      [field]: value,
     }));
   }
 
@@ -117,17 +131,29 @@ export default function EntryModal({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Ya se muestra el error debajo del código de barras
     if (!selectedProduct) {
       return;
     }
 
-    const count = Number(formData.count);
+    if (
+      !isValidEntryQuantities(
+        displays,
+        looseUnits,
+        selectedProduct.unitsPerDisplay,
+      )
+    ) {
+      if (looseUnits >= selectedProduct.unitsPerDisplay) {
+        toast.error('Unidades sueltas inválidas', {
+          description: `Las unidades sueltas deben ser menores a ${selectedProduct.unitsPerDisplay}.`,
+        });
 
-    if (!Number.isInteger(count) || count < 1) {
+        return;
+      }
+
       toast.error('Cantidad inválida', {
-        description: 'La cantidad debe ser mayor a 0.',
+        description: 'Ingresá al menos un display o una unidad.',
       });
+
       return;
     }
 
@@ -139,7 +165,9 @@ export default function EntryModal({
 
     if (selectedCNT.status !== 'ACTIVO') return;
 
-    if (selectedCNT.locationType !== 'EN_PUERTA') return;
+    if (selectedCNT.locationType !== 'EN_PUERTA') {
+      return;
+    }
 
     const existingProduct = selectedCNT.items.find(
       (item) => item.productId === formData.productId,
@@ -147,11 +175,21 @@ export default function EntryModal({
 
     if (
       existingProduct &&
-      existingProduct.lot.toLowerCase() !== formData.lot.trim().toLowerCase()
+      existingProduct.lot.trim().toLowerCase() !==
+        formData.lot.trim().toLowerCase()
     ) {
       toast.error('Lote incompatible', {
         description: `El producto ya existe en el CNT con el lote "${existingProduct.lot}".`,
       });
+
+      return;
+    }
+
+    if (existingProduct && existingProduct.dueDate !== formData.dueDate) {
+      toast.error('Vencimiento incompatible', {
+        description: `El producto ya existe en el CNT con vencimiento ${existingProduct.dueDate}.`,
+      });
+
       return;
     }
 
@@ -179,9 +217,9 @@ export default function EntryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
       <div
-        className="w-full max-w-2xl rounded-xl border"
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-xl border"
         style={{
           backgroundColor: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
@@ -218,7 +256,7 @@ export default function EntryModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-5 p-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-6 md:grid-cols-2">
             <div className="md:col-span-2">
               <label
                 htmlFor="barcode"
@@ -331,23 +369,116 @@ export default function EntryModal({
             </div>
 
             <div>
-              <label htmlFor="count" className="mb-2 block text-sm font-medium">
-                Cantidad
+              <label
+                htmlFor="displays"
+                className="mb-2 block text-sm font-medium"
+                style={{ color: 'var(--color-text)' }}
+              >
+                Displays
               </label>
 
               <input
-                id="count"
-                name="count"
+                id="displays"
+                name="displays"
                 type="number"
-                min="1"
+                min="0"
                 step="1"
                 required
-                value={formData.count}
-                onChange={handleCountChange}
+                value={formData.displays}
+                onChange={(event) =>
+                  handleQuantityChange('displays', event.target.value)
+                }
                 className={inputClass}
                 style={inputStyle}
               />
+
+              {selectedProduct && (
+                <p
+                  className="mt-2 text-xs"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  {selectedProduct.unitsPerDisplay} unidades por display
+                </p>
+              )}
             </div>
+
+            <div>
+              <label
+                htmlFor="looseUnits"
+                className="mb-2 block text-sm font-medium"
+                style={{ color: 'var(--color-text)' }}
+              >
+                Unidades sueltas
+              </label>
+
+              <input
+                id="looseUnits"
+                name="looseUnits"
+                type="number"
+                min="0"
+                step="1"
+                required
+                value={formData.looseUnits}
+                onChange={(event) =>
+                  handleQuantityChange('looseUnits', event.target.value)
+                }
+                className={inputClass}
+                style={inputStyle}
+              />
+
+              {invalidLooseUnits && (
+                <p
+                  className="mt-2 text-xs"
+                  style={{
+                    color: 'var(--color-danger)',
+                  }}
+                >
+                  Debe ser menor a {selectedProduct.unitsPerDisplay}.
+                </p>
+              )}
+            </div>
+
+            {selectedProduct && (
+              <div
+                className="rounded-lg border px-4 py-3 md:col-span-2"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-surface-secondary)',
+                }}
+              >
+                <p
+                  className="text-sm"
+                  style={{
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  Total a ingresar
+                </p>
+
+                <p
+                  className="mt-1 text-lg font-semibold"
+                  style={{
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  {totalCount} {totalCount === 1 ? 'unidad' : 'unidades'}
+                </p>
+
+                {displays > 0 && (
+                  <p
+                    className="mt-1 text-xs"
+                    style={{
+                      color: 'var(--color-text-muted)',
+                    }}
+                  >
+                    {displays} × {selectedProduct.unitsPerDisplay}
+                    {looseUnits > 0 ? ` + ${looseUnits}` : ''}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <label
@@ -422,13 +553,13 @@ export default function EntryModal({
           </div>
 
           <div
-            className="flex justify-end gap-3 border-t px-6 py-4"
+            className="flex flex-col-reverse gap-3 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-6"
             style={{ borderColor: 'var(--color-border)' }}
           >
             <button
               type="button"
               onClick={handleClose}
-              className="rounded-lg border px-4 py-2.5 text-sm font-medium"
+              className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto"
               style={{
                 borderColor: 'var(--color-border)',
                 color: 'var(--color-text-secondary)',
@@ -439,8 +570,10 @@ export default function EntryModal({
 
             <button
               type="submit"
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white"
-              style={{ backgroundColor: 'var(--color-primary)' }}
+              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white sm:w-auto"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+              }}
             >
               Registrar ingreso
             </button>
