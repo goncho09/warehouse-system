@@ -1,29 +1,27 @@
 'use client';
 
 import { Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setDarkMode(document.documentElement.classList.contains('dark'));
+    setMounted(true);
   }, []);
 
-  function toggleTheme() {
-    const newDarkMode = !darkMode;
-
-    document.documentElement.classList.toggle('dark', newDarkMode);
-
-    localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
-
-    setDarkMode(newDarkMode);
+  if (!mounted) {
+    return <div className="h-9 w-9" />;
   }
+
+  const darkMode = resolvedTheme === 'dark';
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
+      onClick={() => setTheme(darkMode ? 'light' : 'dark')}
       aria-label={darkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
       className="
         flex h-9 w-9 items-center justify-center

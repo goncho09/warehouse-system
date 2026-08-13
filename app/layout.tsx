@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import { Toaster } from 'sonner';
 
+import ThemeProvider from '@/components/providers/ThemeProvider';
+
 import './globals.css';
 
 const poppins = Poppins({
@@ -21,32 +23,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const theme = localStorage.getItem('theme');
-
-                if (
-                  theme === 'dark' ||
-                  (!theme &&
-                    window.matchMedia('(prefers-color-scheme: dark)').matches)
-                ) {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
-              } catch {}
-            `,
-          }}
-        />
-      </head>
-
       <body className={poppins.className}>
-        {children}
+        <ThemeProvider>
+          {children}
 
-        <Toaster position="top-right" richColors closeButton />
+          <Toaster position="top-right" richColors closeButton />
+        </ThemeProvider>
       </body>
     </html>
   );
