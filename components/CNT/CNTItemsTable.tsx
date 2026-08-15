@@ -24,84 +24,88 @@ export default function CNTItemsTable({ items, products }: Props) {
 
   return (
     <section
-      className="overflow-hidden rounded-xl border"
+      className="rounded-xl border"
       style={{
         borderColor: 'var(--color-border)',
         backgroundColor: 'var(--color-surface)',
       }}
     >
-      <table className="w-full min-w-max">
-        <thead>
-          <tr
-            className="border-b text-left text-xs uppercase"
-            style={{
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-muted)',
-            }}
-          >
-            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-              Código
-            </th>
-            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-              Código de barras
-            </th>
-            <th className="min-w-56 px-3 py-3 font-medium sm:px-5 sm:py-4">
-              Descripción
-            </th>
-            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-              Lote
-            </th>
-            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-              Vencimiento
-            </th>
-            <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-              Cantidad
-            </th>
-          </tr>
-        </thead>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-max">
+          <thead>
+            <tr
+              className="border-b text-left text-xs uppercase"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-muted)',
+              }}
+            >
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Código
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Código de barras
+              </th>
+              <th className="min-w-56 px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Descripción
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Lote
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Vencimiento
+              </th>
+              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
+                Cantidad
+              </th>
+            </tr>
+          </thead>
 
-        <tbody>
-          {items.map((item) => {
-            const product = products.find(
-              (product) => product.productId === item.productId,
-            );
+          <tbody>
+            {items.map((item) => {
+              const product = products.find(
+                (product) => product.productId === item.productId,
+              );
 
-            return (
-              <tr
-                key={`${item.productId}-${item.lot}`}
-                className="border-b last:border-0"
-                style={{
-                  borderColor: 'var(--color-border-light)',
-                }}
-              >
-                <td className="px-5 py-4">{item.productId}</td>
+              return (
+                <tr
+                  key={`${item.productId}-${item.lot}`}
+                  className="border-b last:border-0"
+                  style={{
+                    borderColor: 'var(--color-border-light)',
+                  }}
+                >
+                  <td className="px-5 py-4">{item.productId}</td>
 
-                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
-                  {product?.barCode}
-                </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
+                    {product?.barCode}
+                  </td>
 
-                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
-                  {product?.description ?? 'Producto no encontrado'}
-                </td>
+                  <td className="min-w-56 px-3 py-3 text-sm sm:px-5 sm:py-4">
+                    {product?.description ?? 'Producto no encontrado'}
+                  </td>
 
-                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
-                  {item.lot}
-                </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
+                    {item.lot}
+                  </td>
 
-                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
-                  {item.dueDate
-                    ? new Date(`${item.dueDate}T00:00:00`).toLocaleDateString(
-                        'es-UY',
-                      )
-                    : 'N/A'}
-                </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
+                    {item.dueDate
+                      ? new Date(`${item.dueDate}T00:00:00`).toLocaleDateString(
+                          'es-UY',
+                        )
+                      : 'N/A'}
+                  </td>
 
-                <td className="px-5 py-4 text-sm font-medium">{item.count}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  <td className="px-5 py-4 text-sm font-medium">
+                    {item.count}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

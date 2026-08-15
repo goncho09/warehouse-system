@@ -102,7 +102,7 @@ export default function CNTView({ cnts, products, locations }: Props) {
   const totalProducts = selectedCNT?.items.length ?? 0;
 
   return (
-    <main className="p-6 md:p-8">
+    <main className="min-w-0 p-4 sm:p-6 md:p-8">
       {/* Encabezado */}
       <section className="mb-6">
         <p
@@ -136,7 +136,7 @@ export default function CNTView({ cnts, products, locations }: Props) {
           Código CNT
         </label>
 
-        <div className="flex max-w-xl gap-3">
+        <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search
               size={18}
@@ -163,7 +163,7 @@ export default function CNTView({ cnts, products, locations }: Props) {
           <button
             type="button"
             onClick={handleSearch}
-            className="rounded-lg px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 sm:w-auto"
             style={{
               backgroundColor: 'var(--color-primary)',
             }}
@@ -330,7 +330,7 @@ export default function CNTView({ cnts, products, locations }: Props) {
           </section>
 
           {/* Contenido */}
-          <section>
+          <section className="min-w-0">
             <div className="mb-3">
               <h3
                 className="font-semibold"
