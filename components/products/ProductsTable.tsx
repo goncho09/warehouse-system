@@ -81,7 +81,6 @@ export default function ProductsTable({ products }: Props) {
     setSortRules((previousRules) => {
       const existingRule = previousRules.find((rule) => rule.column === column);
 
-      // No estaba ordenando por esta columna → agregar ASC
       if (!existingRule) {
         return [
           ...previousRules,
@@ -185,13 +184,13 @@ export default function ProductsTable({ products }: Props) {
 
   return (
     <section
-      className="overflow-hidden rounded-xl border"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border"
       style={{
         backgroundColor: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
     >
-      <div className="relative overflow-x-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-max">
           <thead>
             <tr

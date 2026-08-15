@@ -29,7 +29,7 @@ export default function CNTContentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
       <div
-        className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-xl border"
+        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border"
         style={{
           backgroundColor: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
@@ -86,7 +86,7 @@ export default function CNTContentModal({
           </button>
         </div>
 
-        <div className="min-w-0 p-4 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-hidden p-4 sm:p-6">
           <CNTItemsTable items={cnt.items} products={products} />
         </div>
       </div>

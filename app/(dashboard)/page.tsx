@@ -1,101 +1,102 @@
-import {
-  Package,
-  Boxes,
-  TriangleAlert,
-  CalendarClock,
-  ArrowUpRight,
-  ArrowDownRight,
-} from 'lucide-react';
+export const dynamic = 'force-dynamic';
 
-const stats = [
-  {
-    title: 'Productos',
-    value: '248',
-    description: '+8 esta semana',
-    icon: Package,
-    color: 'var(--color-primary)',
-    background: 'var(--color-primary-light)',
-    trend: 'up',
-  },
-  {
-    title: 'Stock total',
-    value: '12.450',
-    description: '+5,2% esta semana',
-    icon: Boxes,
-    color: 'var(--color-primary)',
-    background: 'var(--color-primary-light)',
-    trend: 'up',
-  },
-  {
-    title: 'Stock bajo',
-    value: '12',
-    description: 'Requieren atención',
-    icon: TriangleAlert,
-    color: 'var(--color-warning)',
-    background: 'var(--color-warning-light)',
-    trend: 'warning',
-  },
-  {
-    title: 'Próximos a vencer',
-    value: '5',
-    description: 'En los próximos 7 días',
-    icon: CalendarClock,
-    color: 'var(--color-danger)',
-    background: 'var(--color-danger-light)',
-    trend: 'danger',
-  },
-];
+import { Package, Boxes, Container, DoorOpen, ArrowRight } from 'lucide-react';
 
-const lowStockProducts = [
-  {
-    name: 'Coca-Cola 1.5L',
-    stock: 12,
-    minimum: 20,
-  },
-  {
-    name: 'Arroz 1kg',
-    stock: 8,
-    minimum: 15,
-  },
-  {
-    name: 'Leche Conaprole 1L',
-    stock: 14,
-    minimum: 25,
-  },
-  {
-    name: 'Papas Chips 150g',
-    stock: 6,
-    minimum: 12,
-  },
-];
+import { prisma } from '@/lib/prisma';
 
-const recentActivity = [
-  {
-    title: 'Coca-Cola 1.5L actualizado',
-    description: 'Stock modificado',
-    time: 'Hace 10 minutos',
-  },
-  {
-    title: 'Arroz 1kg agregado',
-    description: 'Nuevo producto',
-    time: 'Hace 25 minutos',
-  },
-  {
-    title: 'Leche Conaprole 1L actualizado',
-    description: 'Stock modificado',
-    time: 'Hace 1 hora',
-  },
-  {
-    title: 'Papas Chips 150g actualizado',
-    description: 'Stock modificado',
-    time: 'Hace 2 horas',
-  },
-];
+export default async function Home() {
+  const [
+    productCount,
+    activeCNTCount,
+    cntInDoorCount,
+    stockAggregate,
+    recentEntries,
+    recentMovements,
+  ] = await Promise.all([
+    prisma.product.count(),
 
-export default function Home() {
+    prisma.cNT.count({
+      where: {
+        status: 'ACTIVO',
+      },
+    }),
+
+    prisma.cNT.count({
+      where: {
+        status: 'ACTIVO',
+        location: {
+          type: 'EN_PUERTA',
+        },
+      },
+    }),
+
+    prisma.cNTItem.aggregate({
+      _sum: {
+        count: true,
+      },
+    }),
+
+    prisma.entry.findMany({
+      take: 5,
+      orderBy: {
+        entryDate: 'desc',
+      },
+      include: {
+        product: true,
+        cnt: true,
+      },
+    }),
+
+    prisma.cNTMovement.findMany({
+      take: 5,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        cnt: true,
+      },
+    }),
+  ]);
+
+  const totalStock = stockAggregate._sum.count ?? 0;
+
+  const stats = [
+    {
+      title: 'Productos',
+      value: productCount.toLocaleString('es-UY'),
+      description: 'Productos registrados',
+      icon: Package,
+      color: 'var(--color-primary)',
+      background: 'var(--color-primary-light)',
+    },
+    {
+      title: 'Stock total',
+      value: totalStock.toLocaleString('es-UY'),
+      description: 'Unidades almacenadas',
+      icon: Boxes,
+      color: 'var(--color-primary)',
+      background: 'var(--color-primary-light)',
+    },
+    {
+      title: 'CNT activos',
+      value: activeCNTCount.toLocaleString('es-UY'),
+      description: 'Contenedores activos',
+      icon: Container,
+      color: 'var(--color-success)',
+      background: 'var(--color-success-light)',
+    },
+    {
+      title: 'CNT en puerta',
+      value: cntInDoorCount.toLocaleString('es-UY'),
+      description: 'Pendientes de ubicar',
+      icon: DoorOpen,
+      color: 'var(--color-warning)',
+      background: 'var(--color-warning-light)',
+    },
+  ];
+
   return (
-    <main className="min-h-screen p-6 md:p-8">
-      {/* Encabezado */}
+    <div className="min-w-0 p-4 sm:p-6 md:p-8">
       <section className="mb-8">
         <p
           className="mb-1 text-sm font-medium"
@@ -112,7 +113,6 @@ export default function Home() {
         </h2>
       </section>
 
-      {/* Estadísticas */}
       <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -126,26 +126,14 @@ export default function Home() {
                 borderColor: 'var(--color-border)',
               }}
             >
-              <div className="mb-4 flex items-start justify-between">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-lg"
-                  style={{
-                    backgroundColor: stat.background,
-                    color: stat.color,
-                  }}
-                >
-                  <Icon size={20} strokeWidth={1.8} />
-                </div>
-
-                {stat.trend === 'up' && (
-                  <div
-                    className="flex items-center gap-1 text-xs font-medium"
-                    style={{ color: 'var(--color-success)' }}
-                  >
-                    <ArrowUpRight size={15} />
-                    Tendencia positiva
-                  </div>
-                )}
+              <div
+                className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg"
+                style={{
+                  backgroundColor: stat.background,
+                  color: stat.color,
+                }}
+              >
+                <Icon size={20} strokeWidth={1.8} />
               </div>
 
               <p
@@ -173,169 +161,202 @@ export default function Home() {
         })}
       </section>
 
-      {/* Información secundaria */}
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-5">
-        {/* Stock bajo */}
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        {/* Últimos ingresos */}
         <div
-          className="overflow-hidden rounded-xl border xl:col-span-3"
+          className="rounded-xl border"
           style={{
             backgroundColor: 'var(--color-surface)',
             borderColor: 'var(--color-border)',
           }}
         >
-          <div className="flex items-center justify-between border-b px-6 py-5">
-            <div>
-              <h3
-                className="font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
-                Productos con stock bajo
-              </h3>
-
-              <p
-                className="mt-1 text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Productos que requieren atención
-              </p>
-            </div>
-
-            <button
-              className="text-sm font-medium transition-colors"
-              style={{ color: 'var(--color-primary)' }}
-            >
-              Ver todos
-            </button>
-          </div>
-
-          <div className="relative overflow-x-auto">
-            <table className="w-full min-w-max">
-              <thead>
-                <tr
-                  className="border-b text-left text-xs uppercase"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  <th className="px-6 py-3 font-medium">Producto</th>
-                  <th className="px-6 py-3 font-medium">Stock</th>
-                  <th className="px-6 py-3 font-medium">Mínimo</th>
-                  <th className="px-6 py-3 font-medium">Estado</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {lowStockProducts.map((product) => (
-                  <tr
-                    key={product.name}
-                    className="border-b last:border-0"
-                    style={{ borderColor: 'var(--color-border-light)' }}
-                  >
-                    <td
-                      className="px-6 py-4 text-sm font-medium"
-                      style={{ color: 'var(--color-text)' }}
-                    >
-                      {product.name}
-                    </td>
-
-                    <td
-                      className="px-6 py-4 text-sm"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {product.stock}
-                    </td>
-
-                    <td
-                      className="px-6 py-4 text-sm"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {product.minimum}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span
-                        className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
-                        style={{
-                          backgroundColor: 'var(--color-warning-light)',
-                          color: 'var(--color-warning)',
-                        }}
-                      >
-                        Stock bajo
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Actividad reciente */}
-        <div
-          className="rounded-xl border xl:col-span-2"
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderColor: 'var(--color-border)',
-          }}
-        >
-          <div className="border-b px-6 py-5">
+          <div
+            className="border-b px-4 py-5 sm:px-6"
+            style={{
+              borderColor: 'var(--color-border)',
+            }}
+          >
             <h3
               className="font-semibold"
               style={{ color: 'var(--color-text)' }}
             >
-              Actividad reciente
+              Últimos ingresos
             </h3>
 
             <p
               className="mt-1 text-sm"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              Últimos movimientos
+              Mercadería recibida recientemente
             </p>
           </div>
 
-          <div className="px-6">
-            {recentActivity.map((activity, index) => (
-              <div
-                key={activity.title}
-                className="flex gap-3 border-b py-4 last:border-0"
-                style={{ borderColor: 'var(--color-border-light)' }}
+          <div className="px-4 sm:px-6">
+            {recentEntries.length === 0 ? (
+              <p
+                className="py-8 text-center text-sm"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                }}
               >
-                <div className="mt-1">
-                  <div
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: 'var(--color-primary)' }}
-                  />
-                </div>
+                No hay ingresos registrados.
+              </p>
+            ) : (
+              recentEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex flex-col gap-2 border-b py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
+                  style={{
+                    borderColor: 'var(--color-border-light)',
+                  }}
+                >
+                  <div className="min-w-0">
+                    <p
+                      className="truncate text-sm font-medium"
+                      style={{
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {entry.product.description}
+                    </p>
 
-                <div className="min-w-0">
+                    <p
+                      className="mt-1 text-xs"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {entry.cnt.code} · Lote {entry.lot}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 text-left sm:text-right">
+                    <p
+                      className="text-sm font-medium"
+                      style={{
+                        color: 'var(--color-text)',
+                      }}
+                    >
+                      {entry.count} unidades
+                    </p>
+
+                    <p
+                      className="mt-1 text-xs"
+                      style={{
+                        color: 'var(--color-text-muted)',
+                      }}
+                    >
+                      {new Intl.DateTimeFormat('es-UY', {
+                        timeZone: 'America/Montevideo',
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }).format(entry.entryDate)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Últimos movimientos */}
+        <div
+          className="rounded-xl border"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+        >
+          <div
+            className="border-b px-4 py-5 sm:px-6"
+            style={{
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <h3
+              className="font-semibold"
+              style={{ color: 'var(--color-text)' }}
+            >
+              Últimos movimientos
+            </h3>
+
+            <p
+              className="mt-1 text-sm"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Cambios recientes de ubicación
+            </p>
+          </div>
+
+          <div className="px-4 sm:px-6">
+            {recentMovements.length === 0 ? (
+              <p
+                className="py-8 text-center text-sm"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                No hay movimientos registrados.
+              </p>
+            ) : (
+              recentMovements.map((movement) => (
+                <div
+                  key={movement.id}
+                  className="border-b py-4 last:border-0"
+                  style={{
+                    borderColor: 'var(--color-border-light)',
+                  }}
+                >
                   <p
                     className="text-sm font-medium"
-                    style={{ color: 'var(--color-text)' }}
+                    style={{
+                      color: 'var(--color-text)',
+                    }}
                   >
-                    {activity.title}
+                    {movement.cnt.code}
                   </p>
 
-                  <p
-                    className="mt-1 text-xs"
-                    style={{ color: 'var(--color-text-secondary)' }}
+                  <div
+                    className="mt-2 flex flex-wrap items-center gap-2 text-sm"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                    }}
                   >
-                    {activity.description}
-                  </p>
+                    <span>{movement.fromLocationCode ?? 'Sin ubicación'}</span>
+
+                    <ArrowRight size={15} />
+
+                    <span
+                      style={{
+                        color: 'var(--color-primary)',
+                      }}
+                    >
+                      {movement.toLocationCode}
+                    </span>
+                  </div>
 
                   <p
-                    className="mt-1 text-xs"
-                    style={{ color: 'var(--color-text-muted)' }}
+                    className="mt-2 text-xs"
+                    style={{
+                      color: 'var(--color-text-muted)',
+                    }}
                   >
-                    {activity.time}
+                    {new Intl.DateTimeFormat('es-UY', {
+                      timeZone: 'America/Montevideo',
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }).format(movement.createdAt)}
                   </p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

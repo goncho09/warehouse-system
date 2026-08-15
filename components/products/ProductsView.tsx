@@ -16,7 +16,7 @@ export default function ProductsView({ products }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <main className="p-6 md:p-8">
+    <div className="flex h-full min-h-0 flex-col p-4 sm:p-6 md:p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p
@@ -49,12 +49,14 @@ export default function ProductsView({ products }: Props) {
         </button>
       </div>
 
-      <ProductsTable products={products} />
+      <div className="min-h-0 flex-1">
+        <ProductsTable products={products} />
+      </div>
 
       <NewProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
-    </main>
+    </div>
   );
 }

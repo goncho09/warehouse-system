@@ -72,7 +72,7 @@ export default function Sidebar({ isOpen, onClose }: Props) {
       <aside
         className={`
           fixed inset-y-0 left-0 z-50
-          flex w-64 shrink-0 flex-col
+          flex h-screen w-64 shrink-0 flex-col
           transition-transform duration-300 ease-out
           md:static md:z-auto md:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}

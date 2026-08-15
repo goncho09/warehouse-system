@@ -26,13 +26,13 @@ export default function EntriesTable({ entries, products }: Props) {
 
   return (
     <section
-      className="overflow-hidden rounded-xl border"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border"
       style={{
         backgroundColor: 'var(--color-surface)',
         borderColor: 'var(--color-border)',
       }}
     >
-      <div className="relative overflow-x-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-max">
           <thead>
             <tr

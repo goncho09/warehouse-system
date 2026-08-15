@@ -13,13 +13,15 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header onOpenSidebar={() => setIsSidebarOpen(true)} />
 
-        <main className="flex-1">{children}</main>
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+          {children}
+        </main>
       </div>
     </div>
   );

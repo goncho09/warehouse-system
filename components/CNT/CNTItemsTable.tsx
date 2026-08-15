@@ -24,13 +24,13 @@ export default function CNTItemsTable({ items, products }: Props) {
 
   return (
     <section
-      className="rounded-xl border"
+      className="flex h-full min-h-0 flex-col rounded-xl border"
       style={{
         borderColor: 'var(--color-border)',
         backgroundColor: 'var(--color-surface)',
       }}
     >
-      <div className="overflow-x-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-max">
           <thead>
             <tr

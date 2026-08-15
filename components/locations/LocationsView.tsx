@@ -25,10 +25,8 @@ export default function LocationsView({ locations }: Props) {
     (location) => location.type === 'PICKING',
   ).length;
 
-  const specialCount = locationsList.length - pickingCount;
-
   return (
-    <main className="p-6 md:p-8">
+    <div className="flex h-full min-h-0 flex-col p-4 sm:p-6 md:p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p
@@ -73,11 +71,9 @@ export default function LocationsView({ locations }: Props) {
         </div>
       </div>
 
-      <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        {/* tus 3 cards */}
-      </section>
-
-      <LocationsTable locations={locationsList} />
+      <div className="min-h-0 flex-1">
+        <LocationsTable locations={locationsList} />
+      </div>
 
       <LocationModal
         isOpen={isModalOpen}
@@ -85,6 +81,6 @@ export default function LocationsView({ locations }: Props) {
         onClose={() => setIsModalOpen(false)}
         onCreate={handleCreateLocation}
       />
-    </main>
+    </div>
   );
 }

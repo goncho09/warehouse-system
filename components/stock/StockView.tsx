@@ -78,7 +78,7 @@ export default function StockView({ products, stock }: Props) {
     .reduce((total, record) => total + record.count, 0);
 
   return (
-    <main className="p-6 md:p-8">
+    <div className="flex h-full min-h-0 flex-col p-4 sm:p-6 md:p-8">
       <div className="mb-6">
         <p
           className="mb-1 text-sm"
@@ -308,9 +308,11 @@ export default function StockView({ products, stock }: Props) {
             </div>
           </section>
 
-          <StockTable records={records} />
+          <div className="min-h-0 flex-1">
+            <StockTable records={records} />
+          </div>
         </>
       )}
-    </main>
+    </div>
   );
 }

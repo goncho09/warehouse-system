@@ -95,7 +95,7 @@ export default function EntriesView({ products, cnts, entries }: Props) {
   }
 
   return (
-    <main className="p-6 md:p-8">
+    <div className="flex h-full min-h-0 flex-col p-4 sm:p-6 md:p-8">
       <div className="flex items-center gap-3"></div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -142,7 +142,9 @@ export default function EntriesView({ products, cnts, entries }: Props) {
         </div>
       </div>
 
-      <EntriesTable entries={entries} products={products} />
+      <div className="min-h-0 flex-1">
+        <EntriesTable entries={entries} products={products} />
+      </div>
 
       <NewEntryModal
         isOpen={isModalOpen}
@@ -225,6 +227,6 @@ export default function EntriesView({ products, cnts, entries }: Props) {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
