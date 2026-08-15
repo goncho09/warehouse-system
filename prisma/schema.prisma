@@ -68,6 +68,8 @@ model CNT {
   items   CNTItem[]
   entries Entry[]
 
+  movements CNTMovement[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -108,5 +110,17 @@ model Entry {
   entryDate DateTime @default(now())
 
   @@index([productId])
+  @@index([cntId])
+}
+
+model CNTMovement {
+  id               Int      @id @default(autoincrement())
+  cntId            Int
+  fromLocationCode String?
+  toLocationCode   String
+  createdAt        DateTime @default(now())
+
+  cnt CNT @relation(fields: [cntId], references: [id], onDelete: Cascade)
+
   @@index([cntId])
 }

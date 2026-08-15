@@ -28,9 +28,11 @@ export default async function CNTPage() {
           product: true,
         },
       },
-    },
-    orderBy: {
-      code: 'asc',
+      movements: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
   });
 
@@ -66,6 +68,13 @@ export default async function CNTPage() {
         lot: item.lot,
         dueDate: item.dueDate.toISOString().slice(0, 10),
         count: item.count,
+      })),
+
+      movements: cnt.movements.map((movement) => ({
+        id: movement.id,
+        fromLocationCode: movement.fromLocationCode,
+        toLocationCode: movement.toLocationCode,
+        createdAt: movement.createdAt.toISOString(),
       })),
     }));
 

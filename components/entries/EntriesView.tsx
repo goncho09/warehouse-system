@@ -40,6 +40,7 @@ export default function EntriesView({ products, cnts, entries }: Props) {
         locationCode: newCNT.locationCode,
         locationType: newCNT.location.type,
         items: [],
+        movements: [],
       };
 
       setGeneratedCNT(frontendCNT);

@@ -78,8 +78,8 @@ export async function moveCNTLocation(
 
   const oldLocation = cnt.location;
 
-  const updatedCNT = await prisma.$transaction(async (tx) => {
-    const updated = await tx.cNT.update({
+  return prisma.$transaction(async (tx) => {
+    const updatedCNT = await tx.cNT.update({
       where: {
         id: cnt.id,
       },
@@ -89,6 +89,15 @@ export async function moveCNTLocation(
       include: {
         location: true,
         items: true,
+        movements: true,
+      },
+    });
+
+    const movement = await tx.cNTMovement.create({
+      data: {
+        cntId: cnt.id,
+        fromLocationCode: oldLocation.code,
+        toLocationCode: targetLocation.code,
       },
     });
 
@@ -100,8 +109,9 @@ export async function moveCNTLocation(
       });
     }
 
-    return updated;
+    return {
+      cnt: updatedCNT,
+      movement,
+    };
   });
-
-  return updatedCNT;
 }

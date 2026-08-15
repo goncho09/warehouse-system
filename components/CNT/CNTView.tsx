@@ -2,22 +2,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Search,
-  MapPin,
-  Boxes,
-  Package,
-  CircleCheck,
-  TriangleAlert,
-} from 'lucide-react';
+import { Search } from 'lucide-react';
+import { toast } from 'sonner';
 
-import CNTItemsTable from './CNTItemsTable';
+import CNTResultTable from './CNTResultTable';
+import CNTContentModal from './CNTContentModal';
 import MoveCNTModal from './MoveCNTModal';
 
 import type { CNT } from '@/types/CNT';
 import type { Product } from '@/types/Product';
-import { Location } from '@/types/Location';
+import type { Location } from '@/types/Location';
+
 import { moveCNT } from '@/app/actions/cnts';
+import CNTHistoryModal from './CNTHistoryModal';
 
 type Props = {
   cnts: CNT[];
@@ -25,24 +22,17 @@ type Props = {
   locations: Location[];
 };
 
-function getLocationLabel(type: CNT['locationType']) {
-  switch (type) {
-    case 'PICKING':
-      return 'Picking';
-    case 'EN_PUERTA':
-      return 'En puerta';
-    case 'FLOTANTE':
-      return 'Flotante';
-    case 'AVERIAS':
-      return 'Averías';
-  }
-}
-
 export default function CNTView({ cnts, products, locations }: Props) {
   const [search, setSearch] = useState('');
   const [selectedCNT, setSelectedCNT] = useState<CNT | null>(null);
+
   const [notFound, setNotFound] = useState(false);
+
+  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
+
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   const router = useRouter();
 
@@ -68,7 +58,10 @@ export default function CNTView({ cnts, products, locations }: Props) {
   }
 
   async function handleMoveCNT(cntCode: string, targetLocationCode: string) {
-    const updated = await moveCNT(cntCode, targetLocationCode);
+    const result = await moveCNT(cntCode, targetLocationCode);
+
+    const updated = result.cnt;
+    const movement = result.movement;
 
     if (!updated.locationCode || !updated.location) {
       throw new Error('El CNT quedó sin ubicación.');
@@ -87,6 +80,16 @@ export default function CNTView({ cnts, products, locations }: Props) {
         dueDate: item.dueDate.toISOString().slice(0, 10),
         count: item.count,
       })),
+
+      movements: [
+        {
+          id: movement.id,
+          fromLocationCode: movement.fromLocationCode,
+          toLocationCode: movement.toLocationCode,
+          createdAt: movement.createdAt.toISOString(),
+        },
+        ...(selectedCNT?.movements ?? []),
+      ],
     };
 
     setSelectedCNT(updatedCNT);
@@ -96,10 +99,9 @@ export default function CNTView({ cnts, products, locations }: Props) {
     return updatedCNT;
   }
 
-  const totalUnits =
-    selectedCNT?.items.reduce((total, item) => total + item.count, 0) ?? 0;
-
-  const totalProducts = selectedCNT?.items.length ?? 0;
+  function handleHistory() {
+    setIsHistoryModalOpen(true);
+  }
 
   return (
     <main className="min-w-0 p-4 sm:p-6 md:p-8">
@@ -107,14 +109,18 @@ export default function CNTView({ cnts, products, locations }: Props) {
       <section className="mb-6">
         <p
           className="mb-1 text-sm"
-          style={{ color: 'var(--color-text-secondary)' }}
+          style={{
+            color: 'var(--color-text-secondary)',
+          }}
         >
           Consulta de unidades logísticas
         </p>
 
         <h1
           className="text-2xl font-semibold"
-          style={{ color: 'var(--color-text)' }}
+          style={{
+            color: 'var(--color-text)',
+          }}
         >
           CNT
         </h1>
@@ -122,7 +128,7 @@ export default function CNTView({ cnts, products, locations }: Props) {
 
       {/* Buscador */}
       <section
-        className="mb-6 rounded-xl border p-5"
+        className="mb-6 rounded-xl border p-4 sm:p-5"
         style={{
           backgroundColor: 'var(--color-surface)',
           borderColor: 'var(--color-border)',
@@ -131,17 +137,21 @@ export default function CNTView({ cnts, products, locations }: Props) {
         <label
           htmlFor="cnt-search"
           className="mb-2 block text-sm font-medium"
-          style={{ color: 'var(--color-text)' }}
+          style={{
+            color: 'var(--color-text)',
+          }}
         >
           Código CNT
         </label>
 
         <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
+          <div className="relative min-w-0 flex-1">
             <Search
               size={18}
               className="absolute left-3 top-1/2 -translate-y-1/2"
-              style={{ color: 'var(--color-text-muted)' }}
+              style={{
+                color: 'var(--color-text-muted)',
+              }}
             />
 
             <input
@@ -150,7 +160,7 @@ export default function CNTView({ cnts, products, locations }: Props) {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ej: CNT-10001"
+              placeholder="Ej: CNT-000001"
               className="w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm outline-none"
               style={{
                 borderColor: 'var(--color-border)',
@@ -173,7 +183,12 @@ export default function CNTView({ cnts, products, locations }: Props) {
         </div>
 
         {notFound && (
-          <p className="mt-3 text-sm" style={{ color: 'var(--color-danger)' }}>
+          <p
+            className="mt-3 text-sm"
+            style={{
+              color: 'var(--color-danger)',
+            }}
+          >
             No se encontró ningún CNT con ese código.
           </p>
         )}
@@ -181,177 +196,23 @@ export default function CNTView({ cnts, products, locations }: Props) {
 
       {/* Resultado */}
       {selectedCNT && (
-        <>
-          <section className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <span
-              className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium"
-              style={{
-                backgroundColor:
-                  selectedCNT.status === 'ACTIVO'
-                    ? 'var(--color-success-light)'
-                    : 'var(--color-border-light)',
-                color:
-                  selectedCNT.status === 'ACTIVO'
-                    ? 'var(--color-success)'
-                    : 'var(--color-text-secondary)',
-              }}
-            >
-              {selectedCNT.status === 'ACTIVO' ? (
-                <CircleCheck size={15} />
-              ) : (
-                <TriangleAlert size={15} />
-              )}
-
-              {selectedCNT.status === 'ACTIVO' ? 'Activo' : 'Finalizado'}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCNT(selectedCNT);
-                setIsMoveModalOpen(true);
-              }}
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5"
-              style={{
-                backgroundColor: 'var(--color-primary)',
-              }}
-            >
-              Mover CNT
-            </button>
-          </section>
-
-          {/* Resumen */}
-          <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div
-              className="rounded-xl border p-5"
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                borderColor: 'var(--color-border)',
-              }}
-            >
-              <MapPin size={20} style={{ color: 'var(--color-primary)' }} />
-
-              <p
-                className="mt-4 text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Ubicación
-              </p>
-
-              <p
-                className="mt-1 font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
-                {selectedCNT.locationCode}
-              </p>
-            </div>
-
-            <div
-              className="rounded-xl border p-5"
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                borderColor: 'var(--color-border)',
-              }}
-            >
-              <Boxes
-                size={20}
-                style={{
-                  color:
-                    selectedCNT.locationType === 'PICKING'
-                      ? 'var(--color-success)'
-                      : selectedCNT.locationType === 'EN_PUERTA'
-                        ? 'var(--color-warning)'
-                        : 'var(--color-danger)',
-                }}
-              />
-
-              <p
-                className="mt-4 text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Tipo de ubicación
-              </p>
-
-              <p
-                className="mt-1 font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
-                {getLocationLabel(selectedCNT.locationType)}
-              </p>
-            </div>
-
-            <div
-              className="rounded-xl border p-5"
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                borderColor: 'var(--color-border)',
-              }}
-            >
-              <Package size={20} style={{ color: 'var(--color-primary)' }} />
-
-              <p
-                className="mt-4 text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Productos
-              </p>
-
-              <p
-                className="mt-1 text-2xl font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
-                {totalProducts}
-              </p>
-            </div>
-
-            <div
-              className="rounded-xl border p-5"
-              style={{
-                backgroundColor: 'var(--color-surface)',
-                borderColor: 'var(--color-border)',
-              }}
-            >
-              <Boxes size={20} style={{ color: 'var(--color-primary)' }} />
-
-              <p
-                className="mt-4 text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Unidades
-              </p>
-
-              <p
-                className="mt-1 text-2xl font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
-                {totalUnits}
-              </p>
-            </div>
-          </section>
-
-          {/* Contenido */}
-          <section className="min-w-0">
-            <div className="mb-3">
-              <h3
-                className="font-semibold"
-                style={{ color: 'var(--color-text)' }}
-              >
-                Contenido del CNT
-              </h3>
-
-              <p
-                className="mt-1 text-sm"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Productos almacenados actualmente
-              </p>
-            </div>
-
-            <CNTItemsTable items={selectedCNT.items} products={products} />
-          </section>
-        </>
+        <CNTResultTable
+          cnt={selectedCNT}
+          onViewContent={() => setIsContentModalOpen(true)}
+          onMove={() => setIsMoveModalOpen(true)}
+          onViewHistory={handleHistory}
+        />
       )}
 
+      {/* Contenido */}
+      <CNTContentModal
+        isOpen={isContentModalOpen}
+        cnt={selectedCNT}
+        products={products}
+        onClose={() => setIsContentModalOpen(false)}
+      />
+
+      {/* Movimiento */}
       <MoveCNTModal
         isOpen={isMoveModalOpen}
         cnt={selectedCNT}
@@ -360,6 +221,13 @@ export default function CNTView({ cnts, products, locations }: Props) {
           setIsMoveModalOpen(false);
         }}
         onMove={handleMoveCNT}
+      />
+
+      {/* Historial */}
+      <CNTHistoryModal
+        isOpen={isHistoryModalOpen}
+        cnt={selectedCNT}
+        onClose={() => setIsHistoryModalOpen(false)}
       />
     </main>
   );

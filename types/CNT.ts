@@ -16,4 +16,12 @@ export interface CNT {
   locationCode: string;
   locationType: LocationType;
   items: CNTItem[];
+  movements: CNTMovement[];
+}
+
+export interface CNTMovement {
+  id: number;
+  fromLocationCode: string | null;
+  toLocationCode: string;
+  createdAt: string;
 }

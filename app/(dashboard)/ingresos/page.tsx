@@ -38,9 +38,11 @@ export default async function EntriesPage() {
           product: true,
         },
       },
-    },
-    orderBy: {
-      id: 'asc',
+      movements: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
   });
 
@@ -59,6 +61,13 @@ export default async function EntriesPage() {
         lot: item.lot,
         dueDate: item.dueDate.toISOString(),
         count: item.count,
+      })),
+
+      movements: cnt.movements.map((movement) => ({
+        id: movement.id,
+        fromLocationCode: movement.fromLocationCode,
+        toLocationCode: movement.toLocationCode,
+        createdAt: movement.createdAt.toISOString(),
       })),
     }));
 

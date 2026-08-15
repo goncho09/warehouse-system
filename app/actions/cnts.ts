@@ -14,11 +14,11 @@ export async function createCNT() {
 }
 
 export async function moveCNT(cntCode: string, targetLocationCode: string) {
-  const cnt = await moveCNTLocation(cntCode, targetLocationCode);
+  const result = await moveCNTLocation(cntCode, targetLocationCode);
 
   revalidatePath('/cnt');
   revalidatePath('/stock');
   revalidatePath('/ubicaciones');
 
-  return cnt;
+  return result;
 }
