@@ -8,7 +8,7 @@ datasource db {
   provider = "postgresql"
 }
 
-enum ProductCategory {
+enum Category {
   FOOD
   NO_FOOD
   CONGELADO
@@ -27,16 +27,35 @@ enum LocationType {
   AVERIAS
 }
 
+enum OrderStatus {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADO
+}
+
+enum Destination {
+  LA_BLANQUEADA
+  CARRASCO_NORTE
+  TRES_CRUCES
+  SAYAGO
+  CIUDAD_DE_LA_COSTA
+  MALVIN_NORTE
+  AGUADA
+  BRAZO_ORIENTAL
+}
+
 model Product {
   id              Int             @id @default(autoincrement())
   productId       String          @unique
   barCode         String          @unique
   description     String
-  category        ProductCategory
+  category        Category
   unitsPerDisplay Int
 
   cntItems CNTItem[]
   entries  Entry[]
+
+  orderItems OrderItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -123,4 +142,37 @@ model CNTMovement {
   cnt CNT @relation(fields: [cntId], references: [id], onDelete: Cascade)
 
   @@index([cntId])
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  stoCode         String      @unique
+  preparationCode String      @unique
+  destination     Destination
+  status          OrderStatus @default(PENDIENTE)
+  departureDate   DateTime
+  category Category
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items OrderItem[]
+
+  @@unique([destination, category, departureDate])
+  @@index([departureDate])
+  @@index([status])
+}
+
+model OrderItem {
+  id             Int @id @default(autoincrement())
+  orderId        Int
+  productId      Int
+  requestedCount Int
+  pickedCount    Int @default(0)
+  cancelledCount Int @default(0)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+  @@index([productId])
 }

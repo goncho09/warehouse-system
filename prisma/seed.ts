@@ -9,167 +9,214 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter });
 
+type Category = 'FOOD' | 'NO_FOOD' | 'CONGELADO' | 'REFRIGERADO';
+
+type ProductSeed = {
+  productId: string;
+  barCode: string;
+  description: string;
+  category: Category;
+  unitsPerDisplay: number;
+};
+
+const FOOD_NAMES = [
+  'Coca-Cola 1.5L',
+  'Coca-Cola Zero 1.5L',
+  'Pepsi 500ml',
+  'Sprite 600ml',
+  'Fanta Naranja 600ml',
+  'Agua Salus 600ml',
+  'Agua Salus 1.5L',
+  'Red Bull 250ml',
+  'Monster Energy 473ml',
+  'Papas Lays Clásicas 105g',
+  'Papas Lays Jamón 105g',
+  'Doritos 140g',
+  'Cheetos 120g',
+  'Galletitas Oreo 118g',
+  'Galletitas Bridge 140g',
+  'Galletitas María 170g',
+  'Alfajor Portezuelo Chocolate',
+  'Alfajor Portezuelo Blanco',
+  'Alfajor Milka Triple',
+  'Chocolate Milka 100g',
+  'Chocolate Cadbury 90g',
+  'Budín Chocolate 200g',
+  'Budín Vainilla 200g',
+  'Café Instantáneo 170g',
+  'Yerba Canarias 1kg',
+  'Yerba Baldo 1kg',
+  'Arroz 1kg',
+  'Fideos Spaghetti 500g',
+  'Harina 1kg',
+  'Azúcar 1kg',
+  'Aceite de Girasol 900ml',
+  'Atún al Natural 170g',
+  'Mayonesa 500g',
+  'Ketchup 500g',
+  'Salsa de Tomate 340g',
+  'Cerveza Sin Alcohol 355ml',
+];
+
+const NO_FOOD_NAMES = [
+  'Detergente Magistral 500ml',
+  'Detergente Cif 500ml',
+  'Papel Higiénico x4',
+  'Papel Higiénico x12',
+  'Jabón Dove 90g',
+  'Jabón Rexona 90g',
+  'Shampoo Sedal 340ml',
+  'Acondicionador Sedal 340ml',
+  'Desodorante Rexona 150ml',
+  'Lavandina 1L',
+  'Limpiador Cif 750ml',
+  'Esponja de Cocina x3',
+  'Bolsas de Residuos x20',
+  'Rollo de Cocina x2',
+  'Pasta Dental 90g',
+  'Cepillo Dental',
+];
+
+const REFRIGERATED_NAMES = [
+  'Leche Conaprole Entera 1L',
+  'Leche Conaprole Descremada 1L',
+  'Yogur Conaprole Frutilla 1L',
+  'Yogur Conaprole Vainilla 1L',
+  'Muzzarella 500g',
+  'Queso Dambo 500g',
+  'Jamón Cocido 500g',
+  'Manteca 200g',
+  'Postre Chocolate 120g',
+  'Crema de Leche 250ml',
+];
+
+const FROZEN_NAMES = [
+  'Helado Chocolate 1L',
+  'Helado Vainilla 1L',
+  'Hamburguesas Congeladas x4',
+  'Hamburguesas Congeladas x12',
+  'Papas Fritas Congeladas 1kg',
+  'Pizza Congelada Muzzarella',
+  'Nuggets de Pollo 400g',
+  'Milanesas Congeladas 500g',
+  'Vegetales Congelados 500g',
+  'Empanadas Congeladas x6',
+];
+
+function buildProducts(): ProductSeed[] {
+  const all = [
+    ...FOOD_NAMES.map((description) => ({
+      description,
+      category: 'FOOD' as const,
+    })),
+    ...NO_FOOD_NAMES.map((description) => ({
+      description,
+      category: 'NO_FOOD' as const,
+    })),
+    ...REFRIGERATED_NAMES.map((description) => ({
+      description,
+      category: 'REFRIGERADO' as const,
+    })),
+    ...FROZEN_NAMES.map((description) => ({
+      description,
+      category: 'CONGELADO' as const,
+    })),
+  ];
+
+  return all.map((item, index) => {
+    const n = index + 1;
+
+    return {
+      productId: `PRD-${(1000 + n).toString()}`,
+      barCode: `77312345${(67000 + n).toString().padStart(5, '0')}`,
+      description: item.description,
+      category: item.category,
+      unitsPerDisplay:
+        item.category === 'FOOD'
+          ? [6, 10, 12, 20, 24][index % 5]
+          : item.category === 'NO_FOOD'
+            ? [6, 12, 24][index % 3]
+            : [6, 8, 10, 12][index % 4],
+    };
+  });
+}
+
+function makePickingLocations() {
+  const chambers = ['160', '161', '162', '163'];
+  const rows = ['011', '012', '013', '014', '015', '016'];
+  const positions = ['01', '02', '03'];
+  const heights = ['01', '02'];
+
+  return chambers.flatMap((chamber) =>
+    rows.flatMap((row) =>
+      positions.flatMap((position) =>
+        heights.map((height) => ({
+          code: `${chamber}A${row}${position}${height}`,
+          type: 'PICKING' as const,
+          chamber,
+          row,
+          position,
+          height,
+        })),
+      ),
+    ),
+  );
+}
+
+function categoryForChamber(chamber: string): Category {
+  switch (chamber) {
+    case '160':
+      return 'FOOD';
+    case '161':
+      return 'NO_FOOD';
+    case '162':
+      return 'REFRIGERADO';
+    default:
+      return 'CONGELADO';
+  }
+}
+
+function randomBetween(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function dueDateForCategory(category: Category, offset: number) {
+  const base = new Date('2026-08-15T00:00:00');
+
+  const days =
+    category === 'REFRIGERADO'
+      ? 10 + offset * 3
+      : category === 'CONGELADO'
+        ? 120 + offset * 12
+        : category === 'FOOD'
+          ? 90 + offset * 15
+          : 500 + offset * 30;
+
+  base.setDate(base.getDate() + days);
+
+  return base.toISOString().slice(0, 10);
+}
+
 async function main() {
   console.log('🧹 Limpiando base de datos...');
 
-  // IMPORTANTE: orden por claves foráneas
+  // Orden por claves foráneas.
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.cNTMovement.deleteMany();
   await prisma.entry.deleteMany();
   await prisma.cNTItem.deleteMany();
   await prisma.cNT.deleteMany();
   await prisma.location.deleteMany();
   await prisma.product.deleteMany();
 
-  // =========================================================
-  // UBICACIONES
-  // =========================================================
-
   console.log('📍 Creando ubicaciones...');
+
+  const pickingLocations = makePickingLocations();
 
   await prisma.location.createMany({
     data: [
-      // -------------------------
-      // PICKING - FILA 011
-      // -------------------------
-      {
-        code: '160A0110101',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '01',
-        height: '01',
-      },
-      {
-        code: '160A0110102',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '01',
-        height: '02',
-      },
-      {
-        code: '160A0110103',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '01',
-        height: '03',
-      },
-      {
-        code: '160A0110104',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '01',
-        height: '04',
-      },
-      {
-        code: '160A0110201',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '02',
-        height: '01',
-      },
-      {
-        code: '160A0110202',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '02',
-        height: '02',
-      },
-      {
-        code: '160A0110203',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '02',
-        height: '03',
-      },
-      {
-        code: '160A0110204',
-        type: 'PICKING',
-        chamber: '160',
-        row: '011',
-        position: '02',
-        height: '04',
-      },
-
-      // -------------------------
-      // PICKING - FILA 012
-      // -------------------------
-      {
-        code: '160A0120101',
-        type: 'PICKING',
-        chamber: '160',
-        row: '012',
-        position: '01',
-        height: '01',
-      },
-      {
-        code: '160A0120102',
-        type: 'PICKING',
-        chamber: '160',
-        row: '012',
-        position: '01',
-        height: '02',
-      },
-      {
-        code: '160A0120201',
-        type: 'PICKING',
-        chamber: '160',
-        row: '012',
-        position: '02',
-        height: '01',
-      },
-      {
-        code: '160A0120202',
-        type: 'PICKING',
-        chamber: '160',
-        row: '012',
-        position: '02',
-        height: '02',
-      },
-
-      // -------------------------
-      // PICKING - FILA 013
-      // -------------------------
-      {
-        code: '160A0130101',
-        type: 'PICKING',
-        chamber: '160',
-        row: '013',
-        position: '01',
-        height: '01',
-      },
-      {
-        code: '160A0130102',
-        type: 'PICKING',
-        chamber: '160',
-        row: '013',
-        position: '01',
-        height: '02',
-      },
-      {
-        code: '160A0130201',
-        type: 'PICKING',
-        chamber: '160',
-        row: '013',
-        position: '02',
-        height: '01',
-      },
-      {
-        code: '160A0130202',
-        type: 'PICKING',
-        chamber: '160',
-        row: '013',
-        position: '02',
-        height: '02',
-      },
-
-      // -------------------------
-      // AVERÍAS FIJAS
-      // -------------------------
+      ...pickingLocations,
       {
         code: '160A0910101',
         type: 'AVERIAS',
@@ -186,340 +233,96 @@ async function main() {
         position: '01',
         height: '01',
       },
-
-      // -------------------------
-      // EN PUERTA
-      // Una por CNT
-      // -------------------------
-      {
-        code: 'PUE000001',
-        type: 'EN_PUERTA',
-      },
-      {
-        code: 'PUE000002',
-        type: 'EN_PUERTA',
-      },
-      {
-        code: 'PUE000003',
-        type: 'EN_PUERTA',
-      },
-      {
-        code: 'PUE000004',
-        type: 'EN_PUERTA',
-      },
-
-      // -------------------------
-      // FLOTANTES
-      // Una por CNT
-      // -------------------------
-      {
-        code: 'Z000001',
-        type: 'FLOTANTE',
-      },
-      {
-        code: 'Z000002',
-        type: 'FLOTANTE',
-      },
+      ...Array.from({ length: 8 }, (_, index) => ({
+        code: `PUE${(index + 1).toString().padStart(6, '0')}`,
+        type: 'EN_PUERTA' as const,
+      })),
+      ...Array.from({ length: 2 }, (_, index) => ({
+        code: `Z${(index + 1).toString().padStart(6, '0')}`,
+        type: 'FLOTANTE' as const,
+      })),
     ],
   });
-
-  // =========================================================
-  // PRODUCTOS
-  // =========================================================
 
   console.log('📦 Creando productos...');
 
+  const productSeeds = buildProducts();
+
   await prisma.product.createMany({
-    data: [
-      {
-        productId: 'PRD-1001',
-        barCode: '7731234567890',
-        description: 'Coca-Cola 1.5L',
-        category: 'FOOD',
-        unitsPerDisplay: 6,
-      },
-      {
-        productId: 'PRD-1002',
-        barCode: '7731234567891',
-        description: 'Red Bull 250ml',
-        category: 'FOOD',
-        unitsPerDisplay: 24,
-      },
-      {
-        productId: 'PRD-1003',
-        barCode: '7731234567892',
-        description: 'Helado Chocolate 1L',
-        category: 'CONGELADO',
-        unitsPerDisplay: 6,
-      },
-      {
-        productId: 'PRD-1004',
-        barCode: '7731234567893',
-        description: 'Budín Chocolate 200g',
-        category: 'FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1005',
-        barCode: '7731234567894',
-        description: 'Agua Salus 600ml',
-        category: 'FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1006',
-        barCode: '7731234567895',
-        description: 'Pepsi 500ml',
-        category: 'FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1007',
-        barCode: '7731234567896',
-        description: 'Sprite 600ml',
-        category: 'FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1008',
-        barCode: '7731234567897',
-        description: 'Papas Lays Clásicas 105g',
-        category: 'FOOD',
-        unitsPerDisplay: 10,
-      },
-      {
-        productId: 'PRD-1009',
-        barCode: '7731234567898',
-        description: 'Galletitas Oreo 118g',
-        category: 'FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1010',
-        barCode: '7731234567899',
-        description: 'Alfajor Portezuelo Chocolate',
-        category: 'FOOD',
-        unitsPerDisplay: 24,
-      },
-      {
-        productId: 'PRD-1011',
-        barCode: '7731234567900',
-        description: 'Leche Conaprole Entera 1L',
-        category: 'REFRIGERADO',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1012',
-        barCode: '7731234567901',
-        description: 'Yogur Conaprole Frutilla 1L',
-        category: 'REFRIGERADO',
-        unitsPerDisplay: 6,
-      },
-      {
-        productId: 'PRD-1013',
-        barCode: '7731234567902',
-        description: 'Muzzarella 500g',
-        category: 'REFRIGERADO',
-        unitsPerDisplay: 8,
-      },
-      {
-        productId: 'PRD-1014',
-        barCode: '7731234567903',
-        description: 'Hamburguesas Congeladas x4',
-        category: 'CONGELADO',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1015',
-        barCode: '7731234567904',
-        description: 'Papas Fritas Congeladas 1kg',
-        category: 'CONGELADO',
-        unitsPerDisplay: 10,
-      },
-      {
-        productId: 'PRD-1016',
-        barCode: '7731234567905',
-        description: 'Pizza Congelada Muzzarella',
-        category: 'CONGELADO',
-        unitsPerDisplay: 8,
-      },
-      {
-        productId: 'PRD-1017',
-        barCode: '7731234567906',
-        description: 'Detergente Magistral 500ml',
-        category: 'NO_FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1018',
-        barCode: '7731234567907',
-        description: 'Papel Higiénico x4',
-        category: 'NO_FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1019',
-        barCode: '7731234567908',
-        description: 'Jabón Dove 90g',
-        category: 'NO_FOOD',
-        unitsPerDisplay: 24,
-      },
-      {
-        productId: 'PRD-1020',
-        barCode: '7731234567909',
-        description: 'Shampoo Sedal 340ml',
-        category: 'NO_FOOD',
-        unitsPerDisplay: 6,
-      },
-      {
-        productId: 'PRD-1021',
-        barCode: '7731234567910',
-        description: 'Monster Energy 473ml',
-        category: 'FOOD',
-        unitsPerDisplay: 12,
-      },
-      {
-        productId: 'PRD-1022',
-        barCode: '7731234567911',
-        description: 'Chocolate Milka 100g',
-        category: 'FOOD',
-        unitsPerDisplay: 20,
-      },
-      {
-        productId: 'PRD-1023',
-        barCode: '7731234567912',
-        description: 'Cerveza Sin Alcohol 355ml',
-        category: 'FOOD',
-        unitsPerDisplay: 24,
-      },
-      {
-        productId: 'PRD-1024',
-        barCode: '7731234567913',
-        description: 'Café Instantáneo 170g',
-        category: 'FOOD',
-        unitsPerDisplay: 6,
-      },
-    ],
+    data: productSeeds,
   });
 
-  // Traemos los productos para obtener sus IDs internos
   const products = await prisma.product.findMany();
-
   const productByCode = Object.fromEntries(
     products.map((product) => [product.productId, product]),
   );
 
-  // =========================================================
-  // CNTS
-  // =========================================================
+  console.log('📦 Creando CNT de picking...');
 
-  console.log('📦 Creando CNT...');
+  // Usamos 12 CNT por categoría. Hay muchas ubicaciones libres para poder moverlos.
+  const cntByCategory: Record<Category, { id: number; code: string }[]> = {
+    FOOD: [],
+    NO_FOOD: [],
+    REFRIGERADO: [],
+    CONGELADO: [],
+  };
 
-  // EN PUERTA
-  const cnt1 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000001',
-      status: 'ACTIVO',
-      locationCode: 'PUE000001',
-    },
-  });
+  let cntNumber = 1;
 
-  const cnt2 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000002',
-      status: 'ACTIVO',
-      locationCode: 'PUE000002',
-    },
-  });
+  for (const category of [
+    'FOOD',
+    'NO_FOOD',
+    'REFRIGERADO',
+    'CONGELADO',
+  ] as const) {
+    const chamber =
+      category === 'FOOD'
+        ? '160'
+        : category === 'NO_FOOD'
+          ? '161'
+          : category === 'REFRIGERADO'
+            ? '162'
+            : '163';
 
-  const cnt3 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000003',
-      status: 'ACTIVO',
-      locationCode: 'PUE000003',
-    },
-  });
+    const categoryLocations = pickingLocations
+      .filter((location) => location.chamber === chamber)
+      .slice(0, 12);
 
-  // PICKING
-  const cnt4 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000004',
-      status: 'ACTIVO',
-      locationCode: '160A0110101',
-    },
-  });
+    for (const location of categoryLocations) {
+      const code = `CNT-${cntNumber.toString().padStart(6, '0')}`;
 
-  const cnt5 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000005',
-      status: 'ACTIVO',
-      locationCode: '160A0110204',
-    },
-  });
+      const cnt = await prisma.cNT.create({
+        data: {
+          code,
+          status: 'ACTIVO',
+          locationCode: location.code,
+        },
+      });
 
-  const cnt6 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000006',
-      status: 'ACTIVO',
-      locationCode: '160A0120101',
-    },
-  });
+      cntByCategory[category].push({
+        id: cnt.id,
+        code: cnt.code,
+      });
 
-  const cnt7 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000007',
-      status: 'ACTIVO',
-      locationCode: '160A0130202',
-    },
-  });
+      cntNumber += 1;
+    }
+  }
 
-  // FLOTANTE
-  const cnt8 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000008',
-      status: 'ACTIVO',
-      locationCode: 'Z000001',
-    },
-  });
+  console.log('🚪 Creando CNT en puerta...');
 
-  const cnt9 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000009',
-      status: 'ACTIVO',
-      locationCode: 'Z000002',
-    },
-  });
+  for (let i = 0; i < 4; i += 1) {
+    await prisma.cNT.create({
+      data: {
+        code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+        status: 'ACTIVO',
+        locationCode: `PUE${(i + 1).toString().padStart(6, '0')}`,
+      },
+    });
 
-  // AVERÍAS
-  const cnt10 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000010',
-      status: 'ACTIVO',
-      locationCode: '160A0910101',
-    },
-  });
+    cntNumber += 1;
+  }
 
-  const cnt11 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000011',
-      status: 'ACTIVO',
-      locationCode: '160A0900101',
-    },
-  });
-
-  // FINALIZADO
-  // Lo dejamos visible para poder probar validaciones.
-  const cnt12 = await prisma.cNT.create({
-    data: {
-      code: 'CNT-000012',
-      status: 'FINALIZADO',
-      locationCode: 'PUE000004',
-    },
-  });
-
-  // =========================================================
-  // HELPER PARA INGRESOS
-  // =========================================================
+  console.log('🧾 Creando stock e ingresos...');
 
   async function addEntry({
     cntId,
@@ -527,14 +330,12 @@ async function main() {
     lot,
     dueDate,
     count,
-    entryDate,
   }: {
     cntId: number;
     productCode: string;
     lot: string;
     dueDate: string;
     count: number;
-    entryDate?: Date;
   }) {
     const product = productByCode[productCode];
 
@@ -551,23 +352,11 @@ async function main() {
         lot,
         dueDate: parsedDueDate,
         count,
-        ...(entryDate ? { entryDate } : {}),
       },
     });
 
-    await prisma.cNTItem.upsert({
-      where: {
-        cntId_productId: {
-          cntId,
-          productId: product.id,
-        },
-      },
-      update: {
-        count: {
-          increment: count,
-        },
-      },
-      create: {
+    await prisma.cNTItem.create({
+      data: {
         cntId,
         productId: product.id,
         lot,
@@ -577,196 +366,56 @@ async function main() {
     });
   }
 
-  // =========================================================
-  // INGRESOS + CONTENIDO DE CNT
-  // =========================================================
+  const categoryIndexes: Record<Category, number> = {
+    FOOD: 0,
+    NO_FOOD: 0,
+    REFRIGERADO: 0,
+    CONGELADO: 0,
+  };
 
-  console.log('🧾 Creando ingresos...');
+  for (const product of products) {
+    const category = product.category as Category;
+    const pool = cntByCategory[category];
 
-  // CNT-000001 - EN PUERTA
-  await addEntry({
-    cntId: cnt1.id,
-    productCode: 'PRD-1001',
-    lot: 'CC-260801',
-    dueDate: '2027-02-15',
-    count: 18,
-  });
+    // Cada producto existe en 2 CNT distintos para que después el picking
+    // pueda completar desde más de una ubicación y aplicar FEFO.
+    const firstIndex = categoryIndexes[category] % pool.length;
+    const secondIndex = (firstIndex + 5) % pool.length;
 
-  await addEntry({
-    cntId: cnt1.id,
-    productCode: 'PRD-1002',
-    lot: 'RB-260810',
-    dueDate: '2027-01-20',
-    count: 48,
-  });
+    categoryIndexes[category] += 1;
 
-  await addEntry({
-    cntId: cnt1.id,
-    productCode: 'PRD-1004',
-    lot: 'BUD-260812',
-    dueDate: '2026-09-15',
-    count: 24,
-  });
+    const firstCnt = pool[firstIndex];
+    const secondCnt = pool[secondIndex];
 
-  // Segundo ingreso SAME product/lote/vencimiento
-  // Sirve para comprobar que CNTItem suma cantidades.
-  await addEntry({
-    cntId: cnt1.id,
-    productCode: 'PRD-1004',
-    lot: 'BUD-260812',
-    dueDate: '2026-09-15',
-    count: 6,
-  });
+    const baseStock =
+      category === 'FOOD'
+        ? randomBetween(260, 420)
+        : category === 'NO_FOOD'
+          ? randomBetween(140, 230)
+          : randomBetween(70, 130);
 
-  // CNT-000002 - EN PUERTA
-  await addEntry({
-    cntId: cnt2.id,
-    productCode: 'PRD-1005',
-    lot: 'SAL-260801',
-    dueDate: '2027-03-01',
-    count: 36,
-  });
+    const firstCount = Math.floor(baseStock * 0.55);
+    const secondCount = baseStock - firstCount;
 
-  await addEntry({
-    cntId: cnt2.id,
-    productCode: 'PRD-1008',
-    lot: 'LAY-260805',
-    dueDate: '2026-11-30',
-    count: 20,
-  });
+    const productSequence = Number(product.productId.split('-')[1]) - 1000;
 
-  await addEntry({
-    cntId: cnt2.id,
-    productCode: 'PRD-1009',
-    lot: 'ORE-260806',
-    dueDate: '2026-12-15',
-    count: 24,
-  });
+    await addEntry({
+      cntId: firstCnt.id,
+      productCode: product.productId,
+      lot: `${category.slice(0, 3)}-${productSequence.toString().padStart(3, '0')}-A`,
+      dueDate: dueDateForCategory(category, productSequence),
+      count: firstCount,
+    });
 
-  // CNT-000003 - EN PUERTA
-  await addEntry({
-    cntId: cnt3.id,
-    productCode: 'PRD-1011',
-    lot: 'LEC-260812',
-    dueDate: '2026-08-28',
-    count: 24,
-  });
-
-  await addEntry({
-    cntId: cnt3.id,
-    productCode: 'PRD-1012',
-    lot: 'YOG-260812',
-    dueDate: '2026-08-23',
-    count: 12,
-  });
-
-  // CNT-000004 - PICKING
-  await addEntry({
-    cntId: cnt4.id,
-    productCode: 'PRD-1006',
-    lot: 'PEP-260720',
-    dueDate: '2027-01-10',
-    count: 42,
-  });
-
-  await addEntry({
-    cntId: cnt4.id,
-    productCode: 'PRD-1007',
-    lot: 'SPR-260725',
-    dueDate: '2027-01-15',
-    count: 30,
-  });
-
-  // CNT-000005 - PICKING
-  await addEntry({
-    cntId: cnt5.id,
-    productCode: 'PRD-1010',
-    lot: 'POR-260801',
-    dueDate: '2026-11-20',
-    count: 72,
-  });
-
-  await addEntry({
-    cntId: cnt5.id,
-    productCode: 'PRD-1022',
-    lot: 'MIL-260730',
-    dueDate: '2027-02-01',
-    count: 40,
-  });
-
-  // CNT-000006 - PICKING
-  await addEntry({
-    cntId: cnt6.id,
-    productCode: 'PRD-1014',
-    lot: 'HAM-260710',
-    dueDate: '2027-04-10',
-    count: 24,
-  });
-
-  await addEntry({
-    cntId: cnt6.id,
-    productCode: 'PRD-1015',
-    lot: 'PFC-260715',
-    dueDate: '2027-05-01',
-    count: 30,
-  });
-
-  // CNT-000007 - PICKING
-  await addEntry({
-    cntId: cnt7.id,
-    productCode: 'PRD-1017',
-    lot: 'MAG-260501',
-    dueDate: '2028-01-01',
-    count: 36,
-  });
-
-  await addEntry({
-    cntId: cnt7.id,
-    productCode: 'PRD-1018',
-    lot: 'PH-260520',
-    dueDate: '2029-06-01',
-    count: 48,
-  });
-
-  // CNT-000008 - FLOTANTE
-  await addEntry({
-    cntId: cnt8.id,
-    productCode: 'PRD-1021',
-    lot: 'MON-260801',
-    dueDate: '2027-03-25',
-    count: 24,
-  });
-
-  // CNT-000009 - FLOTANTE
-  await addEntry({
-    cntId: cnt9.id,
-    productCode: 'PRD-1024',
-    lot: 'CAF-260601',
-    dueDate: '2028-01-15',
-    count: 12,
-  });
-
-  // CNT-000010 - AVERÍAS
-  await addEntry({
-    cntId: cnt10.id,
-    productCode: 'PRD-1003',
-    lot: 'HEL-260601',
-    dueDate: '2026-09-01',
-    count: 5,
-  });
-
-  // CNT-000011 - AVERÍAS
-  await addEntry({
-    cntId: cnt11.id,
-    productCode: 'PRD-1019',
-    lot: 'DOV-260601',
-    dueDate: '2028-06-01',
-    count: 7,
-  });
-
-  // =========================================================
-  // RESUMEN
-  // =========================================================
+    // Segundo CNT con vencimiento un poco posterior.
+    await addEntry({
+      cntId: secondCnt.id,
+      productCode: product.productId,
+      lot: `${category.slice(0, 3)}-${productSequence.toString().padStart(3, '0')}-B`,
+      dueDate: dueDateForCategory(category, productSequence + 3),
+      count: secondCount,
+    });
+  }
 
   const productCount = await prisma.product.count();
   const locationCount = await prisma.location.count();
@@ -774,14 +423,48 @@ async function main() {
   const entryCount = await prisma.entry.count();
   const cntItemCount = await prisma.cNTItem.count();
 
+  const stockByCategory = await Promise.all(
+    (['FOOD', 'NO_FOOD', 'REFRIGERADO', 'CONGELADO'] as const).map(
+      async (category) => {
+        const items = await prisma.cNTItem.findMany({
+          where: {
+            product: {
+              category,
+            },
+            cnt: {
+              status: 'ACTIVO',
+              location: {
+                type: 'PICKING',
+              },
+            },
+          },
+          select: {
+            count: true,
+          },
+        });
+
+        return {
+          category,
+          stock: items.reduce((total, item) => total + item.count, 0),
+        };
+      },
+    ),
+  );
+
   console.log('');
   console.log('✅ Seed completado');
-  console.log('---------------------------');
+  console.log('--------------------------------');
   console.log(`Productos:   ${productCount}`);
   console.log(`Ubicaciones: ${locationCount}`);
   console.log(`CNT:         ${cntCount}`);
   console.log(`Ingresos:    ${entryCount}`);
   console.log(`CNT Items:   ${cntItemCount}`);
+  console.log('');
+  console.log('Stock PICKING por categoría:');
+
+  for (const item of stockByCategory) {
+    console.log(`${item.category.padEnd(13)} ${item.stock} unidades`);
+  }
 }
 
 main()
