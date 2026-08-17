@@ -1,5 +1,8 @@
 'use client';
 
+import DataTable from '@/components/layout/DataTable';
+
+import type { DataTableColumn } from '@/types/Table';
 import type { Entry } from '@/types/Entry';
 import type { Product } from '@/types/Product';
 
@@ -8,168 +11,170 @@ type Props = {
   products: Product[];
 };
 
+type EntryRow = Entry & {
+  barCode: string;
+  description: string;
+};
+
 export default function EntriesTable({ entries, products }: Props) {
-  if (entries.length === 0) {
-    return (
-      <div
-        className="rounded-xl border p-10 text-center text-sm"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          borderColor: 'var(--color-border)',
-          color: 'var(--color-text-secondary)',
-        }}
-      >
-        Todavía no hay ingresos registrados.
-      </div>
+  const rows: EntryRow[] = entries.map((entry) => {
+    const product = products.find(
+      (product) => product.productId === entry.productId,
     );
-  }
+
+    return {
+      ...entry,
+      barCode: product?.barCode ?? 'N/A',
+      description: product?.description ?? 'N/A',
+    };
+  });
+
+  const columns: DataTableColumn<EntryRow>[] = [
+    {
+      key: 'productId',
+      label: 'Product ID',
+      sortable: true,
+      filterable: true,
+      getValue: (entry) => entry.productId,
+
+      render: (entry) => (
+        <span
+          className="font-medium"
+          style={{
+            color: 'var(--color-text)',
+          }}
+        >
+          {entry.productId}
+        </span>
+      ),
+    },
+
+    {
+      key: 'lot',
+      label: 'Lote',
+      sortable: true,
+      filterable: true,
+      getValue: (entry) => entry.lot,
+    },
+
+    {
+      key: 'barCode',
+      label: 'Código de barras',
+      sortable: true,
+      filterable: true,
+      getValue: (entry) => entry.barCode,
+    },
+
+    {
+      key: 'description',
+      label: 'Descripción',
+      sortable: true,
+      filterable: true,
+      align: 'left',
+      getValue: (entry) => entry.description,
+
+      render: (entry) => (
+        <span
+          className="font-medium"
+          style={{
+            color: 'var(--color-text)',
+          }}
+        >
+          {entry.description}
+        </span>
+      ),
+    },
+
+    {
+      key: 'dueDate',
+      label: 'Vencimiento',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+
+      getValue: (entry) => entry.dueDate ?? '',
+
+      render: (entry) =>
+        entry.dueDate
+          ? new Intl.DateTimeFormat('es-UY', {
+              timeZone: 'America/Montevideo',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            }).format(new Date(`${entry.dueDate}T00:00:00`))
+          : 'N/A',
+    },
+
+    {
+      key: 'count',
+      label: 'Cantidad',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+
+      getValue: (entry) => entry.count,
+
+      render: (entry) => (
+        <span
+          className="font-medium"
+          style={{
+            color: 'var(--color-text)',
+          }}
+        >
+          {entry.count}
+        </span>
+      ),
+    },
+
+    {
+      key: 'cntCode',
+      label: 'Contenedor',
+      sortable: true,
+      filterable: true,
+
+      getValue: (entry) => entry.cntCode,
+
+      render: (entry) => (
+        <span
+          className="font-medium"
+          style={{
+            color: 'var(--color-text)',
+          }}
+        >
+          {entry.cntCode}
+        </span>
+      ),
+    },
+
+    {
+      key: 'entryDate',
+      label: 'Fecha ingreso',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+
+      getValue: (entry) => new Date(entry.entryDate).toISOString().slice(0, 10),
+
+      render: (entry) =>
+        new Intl.DateTimeFormat('es-UY', {
+          timeZone: 'America/Montevideo',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }).format(new Date(entry.entryDate)),
+    },
+  ];
 
   return (
-    <section
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
-      }}
-    >
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full min-w-max">
-          <thead>
-            <tr
-              className="border-b text-left text-xs uppercase"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-muted)',
-              }}
-            >
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Product ID
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Lote
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Código de barras
-              </th>
-              <th className="min-w-56 px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Descripción
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Vencimiento
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Cantidad
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Contenedor
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Fecha ingreso
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {entries.map((entry) => {
-              const product = products.find(
-                (product) => product.productId === entry.productId,
-              );
-
-              return (
-                <tr
-                  key={entry.id}
-                  className="border-b last:border-0"
-                  style={{
-                    borderColor: 'var(--color-border-light)',
-                  }}
-                >
-                  <td
-                    className="px-5 py-4 text-sm font-medium"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {entry.productId}
-                  </td>
-
-                  <td
-                    className="px-5 py-4 text-sm"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {entry.lot}
-                  </td>
-
-                  <td
-                    className="px-5 py-4 text-sm"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {product?.barCode ?? 'N/A'}
-                  </td>
-
-                  <td
-                    className="px-5 py-4 text-sm"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {product?.description ?? 'N/A'}
-                  </td>
-
-                  <td
-                    className="px-5 py-4 text-sm"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {entry.dueDate
-                      ? new Intl.DateTimeFormat('es-UY', {
-                          timeZone: 'America/Montevideo',
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        }).format(new Date(`${entry.dueDate}T00:00:00`))
-                      : 'N/A'}
-                  </td>
-
-                  <td
-                    className="px-5 py-4 text-sm font-medium"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {entry.count}
-                  </td>
-
-                  <td
-                    className="px-5 py-4 text-sm font-medium"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {entry.cntCode}
-                  </td>
-
-                  <td
-                    className="px-5 py-4 text-sm"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                    }}
-                  >
-                    {new Intl.DateTimeFormat('es-UY', {
-                      timeZone: 'America/Montevideo',
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                      hour12: false,
-                    }).format(new Date(entry.entryDate))}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <DataTable
+      data={rows}
+      columns={columns}
+      getRowKey={(entry) => entry.id}
+      emptyMessage="Todavía no hay ingresos registrados."
+    />
   );
 }

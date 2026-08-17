@@ -1,7 +1,6 @@
 'use client';
 
-import { X } from 'lucide-react';
-
+import Modal from '../layout/ui/Modal';
 import CNTItemsTable from './CNTItemsTable';
 
 import type { CNT } from '@/types/CNT';
@@ -27,69 +26,35 @@ export default function CNTContentModal({
   const totalUnits = cnt.items.reduce((total, item) => total + item.count, 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
-      <div
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          borderColor: 'var(--color-border)',
-        }}
-      >
-        <div
-          className="flex items-start justify-between gap-4 border-b px-4 py-4 sm:px-6"
-          style={{
-            borderColor: 'var(--color-border)',
-          }}
-        >
-          <div className="min-w-0">
-            <h2
-              className="text-lg font-semibold"
-              style={{
-                color: 'var(--color-text)',
-              }}
-            >
-              Contenido del CNT
-            </h2>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="5xl"
+      title="Contenido del CNT"
+      subtitle={
+        <div>
+          <p>
+            {cnt.code} · {cnt.locationCode}
+          </p>
 
-            <p
-              className="mt-1 text-sm"
-              style={{
-                color: 'var(--color-text-secondary)',
-              }}
-            >
-              {cnt.code} · {cnt.locationCode}
-            </p>
-
-            <p
-              className="mt-1 text-xs"
-              style={{
-                color: 'var(--color-text-muted)',
-              }}
-            >
-              {cnt.items.length}{' '}
-              {cnt.items.length === 1 ? 'producto' : 'productos'}
-              {' · '}
-              {totalUnits} {totalUnits === 1 ? 'unidad' : 'unidades'}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="shrink-0 rounded-lg p-2 transition-colors hover:bg-(--color-surface-hover)"
+          <p
+            className="mt-1 text-xs"
             style={{
-              color: 'var(--color-text-secondary)',
+              color: 'var(--color-text-muted)',
             }}
           >
-            <X size={20} />
-          </button>
+            {cnt.items.length}{' '}
+            {cnt.items.length === 1 ? 'producto' : 'productos'}
+            {' · '}
+            {totalUnits.toLocaleString('es-UY')}{' '}
+            {totalUnits === 1 ? 'unidad' : 'unidades'}
+          </p>
         </div>
-
-        <div className="min-h-0 flex-1 overflow-hidden p-4 sm:p-6">
-          <CNTItemsTable items={cnt.items} products={products} />
-        </div>
+      }
+    >
+      <div className="min-h-0 p-4 sm:p-6">
+        <CNTItemsTable items={cnt.items} products={products} />
       </div>
-    </div>
+    </Modal>
   );
 }

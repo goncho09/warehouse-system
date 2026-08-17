@@ -1,76 +1,145 @@
+'use client';
+
+import DataTable from '@/components/layout/DataTable';
+import StatusBadge from '../layout/ui/StatusBadge';
+
+import type { DataTableColumn } from '@/types/Table';
 import type { StockRecord } from '@/types/Stock';
 
 type Props = {
   records: StockRecord[];
 };
 
+const locationTypeLabels: Record<StockRecord['locationType'], string> = {
+  PICKING: 'Picking',
+  EN_PUERTA: 'En puerta',
+  FLOTANTE: 'Flotante',
+  AVERIAS: 'Averías',
+};
+
+const columns: DataTableColumn<StockRecord>[] = [
+  {
+    key: 'locationCode',
+    label: 'Ubicación',
+    sortable: true,
+    filterable: true,
+    getValue: (record) => record.locationCode,
+    render: (record) => (
+      <span
+        className="font-medium"
+        style={{
+          color: 'var(--color-text)',
+        }}
+      >
+        {record.locationCode}
+      </span>
+    ),
+  },
+
+  {
+    key: 'locationType',
+    label: 'Tipo',
+    sortable: true,
+    filterable: true,
+    filterType: 'select',
+
+    filterOptions: [
+      { label: 'Picking', value: 'PICKING' },
+      { label: 'En puerta', value: 'EN_PUERTA' },
+      { label: 'Flotante', value: 'FLOTANTE' },
+      { label: 'Averías', value: 'AVERIAS' },
+    ],
+
+    getValue: (record) => record.locationType,
+
+    render: (record) => {
+      const styles = {
+        PICKING: {
+          backgroundColor: 'var(--color-primary-light)',
+          color: 'var(--color-primary)',
+        },
+
+        EN_PUERTA: {
+          backgroundColor: 'var(--color-warning-light)',
+          color: 'var(--color-warning)',
+        },
+
+        FLOTANTE: {
+          backgroundColor: 'var(--color-danger-light)',
+          color: 'var(--color-danger)',
+        },
+
+        AVERIAS: {
+          backgroundColor: 'var(--color-danger-light)',
+          color: 'var(--color-danger)',
+        },
+      };
+
+      return (
+        <span
+          className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+          style={styles[record.locationType]}
+        >
+          {locationTypeLabels[record.locationType]}
+        </span>
+      );
+    },
+  },
+
+  {
+    key: 'count',
+    label: 'Cantidad',
+    sortable: true,
+    filterable: true,
+    filterType: 'number',
+
+    getValue: (record) => record.count,
+
+    render: (record) => (
+      <span
+        className="font-medium"
+        style={{
+          color: 'var(--color-text)',
+        }}
+      >
+        {record.count}
+      </span>
+    ),
+  },
+
+  {
+    key: 'dueDate',
+    label: 'Vencimiento',
+    sortable: true,
+    filterable: true,
+    filterType: 'date',
+
+    getValue: (record) => record.dueDate ?? '',
+
+    render: (record) => {
+      const variants = {
+        PICKING: 'primary',
+        EN_PUERTA: 'warning',
+        FLOTANTE: 'danger',
+        AVERIAS: 'danger',
+      } as const;
+
+      return (
+        <StatusBadge variant={variants[record.locationType]}>
+          {locationTypeLabels[record.locationType]}
+        </StatusBadge>
+      );
+    },
+  },
+];
+
 export default function StockTable({ records }: Props) {
   return (
-    <section
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
-      }}
-    >
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full min-w-max">
-          <thead>
-            <tr
-              className="border-b text-left text-xs uppercase"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-muted)',
-              }}
-            >
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Ubicación
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Tipo
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Cantidad
-              </th>
-              <th className="whitespace-nowrap px-3 py-3 font-medium sm:px-5 sm:py-4">
-                Vencimiento
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {records.map((record) => (
-              <tr
-                key={`${record.productId}-${record.locationCode}`}
-                className="border-b last:border-0"
-                style={{
-                  borderColor: 'var(--color-border-light)',
-                }}
-              >
-                <td className="px-5 py-4 text-sm font-medium">
-                  {record.locationCode}
-                </td>
-
-                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
-                  {record.locationType}
-                </td>
-
-                <td className="px-5 py-4 text-sm font-medium">
-                  {record.count}
-                </td>
-
-                <td className="whitespace-nowrap px-3 py-3 text-sm sm:px-5 sm:py-4">
-                  {record.dueDate
-                    ? new Date(`${record.dueDate}T00:00:00`).toLocaleDateString(
-                        'es-UY',
-                      )
-                    : 'N/A'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <DataTable
+      data={records}
+      columns={columns}
+      getRowKey={(record) => `${record.productId}-${record.locationCode}`}
+      emptyMessage="No se encontró stock."
+    />
   );
 }

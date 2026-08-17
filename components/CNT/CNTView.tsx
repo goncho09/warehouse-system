@@ -3,18 +3,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { toast } from 'sonner';
+
+import PageHeader from '../layout/ui/PageHeader';
 
 import CNTResultTable from './CNTResultTable';
 import CNTContentModal from './CNTContentModal';
 import MoveCNTModal from './MoveCNTModal';
+import CNTHistoryModal from './CNTHistoryModal';
+
+import { moveCNT } from '@/app/actions/cnts';
 
 import type { CNT } from '@/types/CNT';
 import type { Product } from '@/types/Product';
 import type { Location } from '@/types/Location';
-
-import { moveCNT } from '@/app/actions/cnts';
-import CNTHistoryModal from './CNTHistoryModal';
 
 type Props = {
   cnts: CNT[];
@@ -23,6 +24,8 @@ type Props = {
 };
 
 export default function CNTView({ cnts, products, locations }: Props) {
+  const router = useRouter();
+
   const [search, setSearch] = useState('');
   const [selectedCNT, setSelectedCNT] = useState<CNT | null>(null);
 
@@ -33,8 +36,6 @@ export default function CNTView({ cnts, products, locations }: Props) {
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-
-  const router = useRouter();
 
   function handleSearch() {
     const value = search.trim().toLowerCase();
@@ -99,32 +100,9 @@ export default function CNTView({ cnts, products, locations }: Props) {
     return updatedCNT;
   }
 
-  function handleHistory() {
-    setIsHistoryModalOpen(true);
-  }
-
   return (
-    <main className="min-w-0 p-4 sm:p-6 md:p-8">
-      {/* Encabezado */}
-      <section className="mb-6">
-        <p
-          className="mb-1 text-sm"
-          style={{
-            color: 'var(--color-text-secondary)',
-          }}
-        >
-          Consulta de unidades logísticas
-        </p>
-
-        <h1
-          className="text-2xl font-semibold"
-          style={{
-            color: 'var(--color-text)',
-          }}
-        >
-          CNT
-        </h1>
-      </section>
+    <div className="flex h-full min-h-0 flex-col p-4 sm:p-6 md:p-8">
+      <PageHeader eyebrow="Consulta de unidades logísticas" title="CNT" />
 
       {/* Buscador */}
       <section
@@ -158,10 +136,16 @@ export default function CNTView({ cnts, products, locations }: Props) {
               id="cnt-search"
               type="text"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+
+                if (notFound) {
+                  setNotFound(false);
+                }
+              }}
               onKeyDown={handleKeyDown}
               placeholder="Ej: CNT-000001"
-              className="w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm outline-none"
+              className="w-full rounded-lg border py-2.5 pl-10 pr-3 text-sm outline-none transition-colors focus:border-[var(--color-primary)]"
               style={{
                 borderColor: 'var(--color-border)',
                 backgroundColor: 'var(--color-surface)',
@@ -195,16 +179,53 @@ export default function CNTView({ cnts, products, locations }: Props) {
       </section>
 
       {/* Resultado */}
-      {selectedCNT && (
-        <CNTResultTable
-          cnt={selectedCNT}
-          onViewContent={() => setIsContentModalOpen(true)}
-          onMove={() => setIsMoveModalOpen(true)}
-          onViewHistory={handleHistory}
-        />
-      )}
+      <div className="min-h-0 flex-1">
+        {selectedCNT ? (
+          <CNTResultTable
+            cnt={selectedCNT}
+            onViewContent={() => setIsContentModalOpen(true)}
+            onMove={() => setIsMoveModalOpen(true)}
+            onViewHistory={() => setIsHistoryModalOpen(true)}
+          />
+        ) : (
+          <div
+            className="flex h-full min-h-40 items-center justify-center rounded-xl border p-8 text-center"
+            style={{
+              backgroundColor: 'var(--color-surface)',
+              borderColor: 'var(--color-border)',
+            }}
+          >
+            <div>
+              <Search
+                size={30}
+                className="mx-auto mb-3"
+                style={{
+                  color: 'var(--color-text-muted)',
+                }}
+              />
 
-      {/* Contenido */}
+              <p
+                className="text-sm font-medium"
+                style={{
+                  color: 'var(--color-text)',
+                }}
+              >
+                Buscá un CNT
+              </p>
+
+              <p
+                className="mt-1 text-xs"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                Ingresá o escaneá el código para consultar sus datos.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       <CNTContentModal
         isOpen={isContentModalOpen}
         cnt={selectedCNT}
@@ -212,23 +233,19 @@ export default function CNTView({ cnts, products, locations }: Props) {
         onClose={() => setIsContentModalOpen(false)}
       />
 
-      {/* Movimiento */}
       <MoveCNTModal
         isOpen={isMoveModalOpen}
         cnt={selectedCNT}
         locations={locations}
-        onClose={() => {
-          setIsMoveModalOpen(false);
-        }}
+        onClose={() => setIsMoveModalOpen(false)}
         onMove={handleMoveCNT}
       />
 
-      {/* Historial */}
       <CNTHistoryModal
         isOpen={isHistoryModalOpen}
         cnt={selectedCNT}
         onClose={() => setIsHistoryModalOpen(false)}
       />
-    </main>
+    </div>
   );
 }

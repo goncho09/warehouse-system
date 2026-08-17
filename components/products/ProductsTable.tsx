@@ -1,415 +1,129 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, Package } from 'lucide-react';
+import DataTable from '@/components/layout/DataTable';
+import StatusBadge from '../layout/ui/StatusBadge';
 
+import type { DataTableColumn } from '@/types/Table';
 import type { Product } from '@/types/Product';
 
 type Props = {
   products: Product[];
 };
 
-type SortColumn =
-  | 'productId'
-  | 'barCode'
-  | 'description'
-  | 'category'
-  | 'unitsPerDisplay';
-
-type SortDirection = 'asc' | 'desc';
-
-type Filters = {
-  productId: string;
-  barCode: string;
-  description: string;
-  category: string;
-  unitsPerDisplay: string;
+const categoryLabels: Record<Product['category'], string> = {
+  FOOD: 'Food',
+  NO_FOOD: 'No Food',
+  CONGELADO: 'Congelado',
+  REFRIGERADO: 'Refrigerado',
 };
 
-const initialFilters: Filters = {
-  productId: '',
-  barCode: '',
-  description: '',
-  category: '',
-  unitsPerDisplay: '',
-};
+const columns: DataTableColumn<Product>[] = [
+  {
+    key: 'productId',
+    label: 'Código',
+    sortable: true,
+    filterable: true,
+    getValue: (product) => product.productId,
+    render: (product) => (
+      <span
+        className="font-medium"
+        style={{
+          color: 'var(--color-text)',
+        }}
+      >
+        {product.productId}
+      </span>
+    ),
+  },
 
-function matchesText(value: string, search: string) {
-  if (!search) return true;
+  {
+    key: 'barCode',
+    label: 'Código de barras',
+    sortable: true,
+    filterable: true,
+    getValue: (product) => product.barCode,
+  },
 
-  const normalizedValue = value.toLowerCase();
-  const normalizedSearch = search.toLowerCase();
+  {
+    key: 'description',
+    label: 'Descripción',
+    sortable: true,
+    filterable: true,
+    align: 'left',
+    getValue: (product) => product.description,
+    render: (product) => (
+      <span
+        className="font-medium"
+        style={{
+          color: 'var(--color-text)',
+        }}
+      >
+        {product.description}
+      </span>
+    ),
+  },
 
-  const startsWithWildcard = normalizedSearch.startsWith('%');
-  const endsWithWildcard = normalizedSearch.endsWith('%');
+  {
+    key: 'unitsPerDisplay',
+    label: 'Display',
+    sortable: true,
+    filterable: true,
+    getValue: (product) => product.unitsPerDisplay,
+    filterType: 'number',
+  },
 
-  const cleanSearch = normalizedSearch.replaceAll('%', '');
+  {
+    key: 'category',
+    label: 'Categoría',
+    sortable: true,
+    filterable: true,
+    filterType: 'select',
 
-  if (startsWithWildcard && endsWithWildcard) {
-    return normalizedValue.includes(cleanSearch);
-  }
+    filterOptions: [
+      {
+        label: 'Food',
+        value: 'FOOD',
+      },
+      {
+        label: 'No Food',
+        value: 'NO_FOOD',
+      },
+      {
+        label: 'Congelado',
+        value: 'CONGELADO',
+      },
+      {
+        label: 'Refrigerado',
+        value: 'REFRIGERADO',
+      },
+    ],
 
-  if (startsWithWildcard) {
-    return normalizedValue.endsWith(cleanSearch);
-  }
+    getValue: (product) => product.category,
 
-  if (endsWithWildcard) {
-    return normalizedValue.startsWith(cleanSearch);
-  }
-
-  return normalizedValue === cleanSearch;
-}
-
-export default function ProductsTable({ products }: Props) {
-  const [filters, setFilters] = useState<Filters>(initialFilters);
-
-  type SortRule = {
-    column: SortColumn;
-    direction: SortDirection;
-  };
-
-  const [sortRules, setSortRules] = useState<SortRule[]>([]);
-
-  function handleFilterChange(column: keyof Filters, value: string) {
-    setFilters((previous) => ({
-      ...previous,
-      [column]: value,
-    }));
-  }
-
-  function handleSort(column: SortColumn) {
-    setSortRules((previousRules) => {
-      const existingRule = previousRules.find((rule) => rule.column === column);
-
-      if (!existingRule) {
-        return [
-          ...previousRules,
-          {
-            column,
-            direction: 'asc',
-          },
-        ];
-      }
-
-      // ASC → DESC
-      if (existingRule.direction === 'asc') {
-        return previousRules.map((rule) =>
-          rule.column === column ? { ...rule, direction: 'desc' } : rule,
-        );
-      }
-
-      // DESC → quitar criterio
-      return previousRules.filter((rule) => rule.column !== column);
-    });
-  }
-
-  const filteredProducts = useMemo(() => {
-    const result = products.filter((product) => {
-      const matchesCode = matchesText(product.productId, filters.productId);
-
-      const matchesName = matchesText(product.description, filters.description);
-
-      const matchesBarCode = matchesText(product.barCode, filters.barCode);
-
-      const matchesCategory =
-        !filters.category || product.category === filters.category;
-
-      const matchesDisplay =
-        !filters.unitsPerDisplay ||
-        product.unitsPerDisplay === Number(filters.unitsPerDisplay);
+    render: (product) => {
+      const variants = {
+        FOOD: 'primary',
+        NO_FOOD: 'neutral',
+        CONGELADO: 'primary',
+        REFRIGERADO: 'success',
+      } as const;
 
       return (
-        matchesCode &&
-        matchesName &&
-        matchesCategory &&
-        matchesDisplay &&
-        matchesBarCode
+        <StatusBadge variant={variants[product.category]}>
+          {categoryLabels[product.category]}
+        </StatusBadge>
       );
-    });
+    },
+  },
+];
 
-    if (sortRules.length === 0) {
-      return result;
-    }
-
-    return [...result].sort((a, b) => {
-      for (const rule of sortRules) {
-        const valueA = a[rule.column];
-        const valueB = b[rule.column];
-
-        let comparison = 0;
-
-        if (typeof valueA === 'number' && typeof valueB === 'number') {
-          comparison = valueA - valueB;
-        } else {
-          comparison = String(valueA).localeCompare(String(valueB));
-        }
-
-        if (comparison !== 0) {
-          return rule.direction === 'asc' ? comparison : -comparison;
-        }
-      }
-
-      return 0;
-    });
-  }, [products, filters, sortRules]);
-
-  function SortIcon({ column }: { column: SortColumn }) {
-    const index = sortRules.findIndex((rule) => rule.column === column);
-
-    if (index === -1) {
-      return <ArrowUpDown size={14} />;
-    }
-
-    const rule = sortRules[index];
-
-    return (
-      <span className="flex items-center gap-1">
-        {rule.direction === 'asc' ? (
-          <ArrowUp size={14} />
-        ) : (
-          <ArrowDown size={14} />
-        )}
-
-        {sortRules.length > 1 && (
-          <span
-            className="text-[10px] font-semibold"
-            style={{ color: 'var(--color-primary)' }}
-          >
-            {index + 1}
-          </span>
-        )}
-      </span>
-    );
-  }
-
+export default function ProductsTable({ products }: Props) {
   return (
-    <section
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderColor: 'var(--color-border)',
-      }}
-    >
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full min-w-max">
-          <thead>
-            <tr
-              className="border-b"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
-              <th className="p-4 text-left">
-                <button
-                  onClick={() => handleSort('productId')}
-                  className="flex items-center gap-2 text-xs font-medium uppercase"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Código
-                  <SortIcon column="productId" />
-                </button>
-              </th>
-
-              <th className="p-4 text-left">
-                <button
-                  onClick={() => handleSort('barCode')}
-                  className="flex items-center gap-2 text-xs font-medium uppercase"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Código de barras
-                  <SortIcon column="barCode" />
-                </button>
-              </th>
-
-              <th className="min-w-56 px-3 py-3 font-medium sm:px-5 sm:py-4">
-                <button
-                  onClick={() => handleSort('description')}
-                  className="flex items-center gap-2 text-xs font-medium uppercase"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Descripción
-                  <SortIcon column="description" />
-                </button>
-              </th>
-
-              <th className="p-4 text-left">
-                <button
-                  onClick={() => handleSort('unitsPerDisplay')}
-                  className="flex items-center gap-2 text-xs font-medium uppercase"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Display
-                  <SortIcon column="unitsPerDisplay" />
-                </button>
-              </th>
-
-              <th className="p-4 text-left">
-                <button
-                  onClick={() => handleSort('category')}
-                  className="flex items-center gap-2 text-xs font-medium uppercase"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
-                  Categoría
-                  <SortIcon column="category" />
-                </button>
-              </th>
-            </tr>
-
-            <tr
-              className="border-b"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
-              <th className="p-4">
-                <input
-                  id="codigoProducto"
-                  value={filters.productId}
-                  onChange={(event) =>
-                    handleFilterChange('productId', event.target.value)
-                  }
-                  placeholder="%código%"
-                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                  }}
-                />
-              </th>
-
-              <th className="p-4">
-                <input
-                  id="codigoBarras"
-                  value={filters.barCode}
-                  onChange={(event) =>
-                    handleFilterChange('barCode', event.target.value)
-                  }
-                  placeholder="%código de barras%"
-                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                  }}
-                />
-              </th>
-
-              <th className="p-4">
-                <input
-                  id="descripcion"
-                  value={filters.description}
-                  onChange={(event) =>
-                    handleFilterChange('description', event.target.value)
-                  }
-                  placeholder="%nombre%"
-                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                  }}
-                />
-              </th>
-
-              <th className="p-4">
-                <input
-                  type="number"
-                  min="1"
-                  value={filters.unitsPerDisplay}
-                  onChange={(event) =>
-                    handleFilterChange('unitsPerDisplay', event.target.value)
-                  }
-                  placeholder="Unidades"
-                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                    backgroundColor: 'var(--color-surface)',
-                    color: 'var(--color-text)',
-                  }}
-                />
-              </th>
-              <th className="p-4">
-                <select
-                  value={filters.category}
-                  onChange={(event) =>
-                    handleFilterChange('category', event.target.value)
-                  }
-                  className="w-full rounded-md border px-3 py-2 text-sm outline-none"
-                  style={{
-                    borderColor: 'var(--color-border)',
-                    backgroundColor: 'var(--color-surface)',
-                    color: 'var(--color-text)',
-                  }}
-                >
-                  <option value="">Todas</option>
-                  <option value="FOOD">Food</option>
-                  <option value="NO_FOOD">No Food</option>
-                  <option value="CONGELADO">Congelado</option>
-                  <option value="REFRIGERADO">Refrigerado</option>
-                </select>
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredProducts.map((product) => (
-              <tr
-                key={product.id}
-                className="border-b last:border-0"
-                style={{
-                  borderColor: 'var(--color-border-light)',
-                }}
-              >
-                <td
-                  className="px-4 py-4 text-sm"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {product.productId}
-                </td>
-
-                <td
-                  className="px-4 py-4 text-sm"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {product.barCode}
-                </td>
-
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: 'var(--color-text)' }}
-                    >
-                      {product.description}
-                    </span>
-                  </div>
-                </td>
-
-                <td
-                  className="px-4 py-4 text-sm"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {product.unitsPerDisplay}
-                </td>
-                <td
-                  className="px-4 py-4 text-sm"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {product.category}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div
-          className="p-8 text-center text-sm"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          No se encontraron productos.
-        </div>
-      )}
-    </section>
+    <DataTable
+      data={products}
+      columns={columns}
+      getRowKey={(product) => product.id}
+      emptyMessage="No se encontraron productos."
+    />
   );
 }

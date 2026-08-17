@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { MapPinned, Plus } from 'lucide-react';
 
+import PageHeader from '../layout/ui/PageHeader';
 import LocationsTable from './LocationsTable';
 import LocationModal from './LocationModal';
 
@@ -27,49 +28,43 @@ export default function LocationsView({ locations }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col p-4 sm:p-6 md:p-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p
-            className="mb-1 text-sm"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Organización del depósito
-          </p>
+      <PageHeader
+        eyebrow="Organización del depósito"
+        title="Ubicaciones"
+        actions={
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <div
+              className="flex items-center justify-center gap-2 rounded-lg border px-3 py-2"
+              style={{
+                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-surface)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              <MapPinned size={18} />
 
-          <h1
-            className="text-2xl font-semibold"
-            style={{ color: 'var(--color-text)' }}
-          >
-            Ubicaciones
-          </h1>
-        </div>
+              <span className="text-sm">
+                {locationsList.length}{' '}
+                {locationsList.length === 1 ? 'ubicación' : 'ubicaciones'}
+                {' · '}
+                {pickingCount} picking
+              </span>
+            </div>
 
-        <div className="flex items-center gap-3">
-          <div
-            className="flex items-center gap-2 rounded-lg border px-3 py-2"
-            style={{
-              borderColor: 'var(--color-border)',
-              backgroundColor: 'var(--color-surface)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            <MapPinned size={18} />
-            <span className="text-sm">{locationsList.length} ubicaciones</span>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:w-auto"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+              }}
+            >
+              <Plus size={18} />
+              Nueva ubicación
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            style={{
-              backgroundColor: 'var(--color-primary)',
-            }}
-          >
-            <Plus size={18} />
-            Nueva ubicación
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="min-h-0 flex-1">
         <LocationsTable locations={locationsList} />

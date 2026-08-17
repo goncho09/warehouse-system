@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
+import Modal from '../layout/ui/Modal';
+
 import type { Product } from '@/types/Product';
-import { EntryFormData } from '@/types/Entry';
-import { CNT } from '@/types/CNT';
+import type { EntryFormData } from '@/types/Entry';
+import type { CNT } from '@/types/CNT';
 
 import { calculateTotalUnits, isValidEntryQuantities } from '@/lib/entry';
 
@@ -36,10 +37,9 @@ export default function EntryModal({
   onCreate,
 }: Props) {
   const [formData, setFormData] = useState<EntryFormData>(initialFormData);
-  const [barCode, setBarCode] = useState('');
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [barCode, setBarCode] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const selectedProduct = products.find(
     (product) => product.barCode === barCode.trim(),
@@ -49,7 +49,9 @@ export default function EntryModal({
     (cnt) => cnt.code.toLowerCase() === formData.cntCode.trim().toLowerCase(),
   );
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   const displays = Number(formData.displays || 0);
   const looseUnits = Number(formData.looseUnits || 0);
@@ -114,7 +116,9 @@ export default function EntryModal({
   }
 
   function getDaysUntilDueDate(dueDate: string) {
-    if (!dueDate) return null;
+    if (!dueDate) {
+      return null;
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -161,9 +165,13 @@ export default function EntryModal({
       return;
     }
 
-    if (!selectedCNT) return;
+    if (!selectedCNT) {
+      return;
+    }
 
-    if (selectedCNT.status !== 'ACTIVO') return;
+    if (selectedCNT.status !== 'ACTIVO') {
+      return;
+    }
 
     if (selectedCNT.locationType !== 'EN_PUERTA') {
       return;
@@ -193,21 +201,39 @@ export default function EntryModal({
       return;
     }
 
-    await onCreate(formData);
+    try {
+      setIsSaving(true);
 
-    setFormData(initialFormData);
-    setBarCode('');
-    onClose();
+      await onCreate(formData);
+
+      setFormData(initialFormData);
+      setBarCode('');
+      onClose();
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo registrar el ingreso.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function handleClose() {
+    if (isSaving) {
+      return;
+    }
+
     setFormData(initialFormData);
     setBarCode('');
     onClose();
   }
 
   const inputClass =
-    'w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--color-primary)]';
+    'w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60';
 
   const inputStyle = {
     borderColor: 'var(--color-border)',
@@ -217,369 +243,383 @@ export default function EntryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
-      <div
-        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-xl border"
-        style={{
-          backgroundColor: 'var(--color-surface)',
-          borderColor: 'var(--color-border)',
-        }}
-      >
-        <div
-          className="flex items-center justify-between border-b px-6 py-4"
-          style={{ borderColor: 'var(--color-border)' }}
-        >
-          <div>
-            <h2
-              className="text-lg font-semibold"
-              style={{ color: 'var(--color-text)' }}
-            >
-              Registrar ingreso
-            </h2>
-
-            <p
-              className="mt-1 text-sm"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              La mercadería ingresará en la ubicación En puerta
-            </p>
-          </div>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      maxWidth="2xl"
+      title="Registrar ingreso"
+      subtitle="La mercadería ingresará en la ubicación En puerta"
+      footer={
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg p-2"
-            style={{ color: 'var(--color-text-secondary)' }}
+            disabled={isSaving}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            style={{
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-secondary)',
+            }}
           >
-            <X size={20} />
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            form="new-entry-form"
+            disabled={isSaving}
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            style={{
+              backgroundColor: 'var(--color-primary)',
+            }}
+          >
+            {isSaving ? 'Registrando...' : 'Registrar ingreso'}
           </button>
         </div>
+      }
+    >
+      <form
+        id="new-entry-form"
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-6 md:grid-cols-2"
+      >
+        {/* Código de barras */}
+        <div className="md:col-span-2">
+          <label
+            htmlFor="barcode"
+            className="mb-2 block text-sm font-medium"
+            style={{
+              color: 'var(--color-text)',
+            }}
+          >
+            Código de barras
+          </label>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-4 p-4 sm:gap-5 sm:p-6 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label
-                htmlFor="barcode"
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-text)' }}
-              >
-                Código de barras
-              </label>
+          <input
+            id="barcode"
+            type="text"
+            value={barCode}
+            onChange={handleBarcodeChange}
+            placeholder="Escanear o ingresar código..."
+            autoFocus
+            disabled={isSaving}
+            className={inputClass}
+            style={inputStyle}
+          />
 
-              <input
-                id="barcode"
-                type="text"
-                value={barCode}
-                onChange={handleBarcodeChange}
-                placeholder="Escanear o ingresar código..."
-                autoFocus
-                className={inputClass}
-                style={inputStyle}
-              />
-
-              {selectedProduct && (
-                <div
-                  className="md:col-span-2 rounded-lg border p-4"
-                  style={{
-                    borderColor: 'var(--color-primary-light)',
-                    backgroundColor: 'var(--color-primary-hover)',
-                  }}
-                >
-                  <p
-                    className="font-medium"
-                    style={{ color: 'var(--color-text)' }}
-                  >
-                    {selectedProduct.description}
-                  </p>
-
-                  <div
-                    className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    <span>Código: {selectedProduct.id}</span>
-
-                    <span>Display: {selectedProduct.unitsPerDisplay}</span>
-
-                    <span>Categoría: {selectedProduct.category}</span>
-                  </div>
-                </div>
-              )}
-
-              {barCode && !selectedProduct && (
-                <p
-                  className="md:col-span-2 text-sm"
-                  style={{ color: 'var(--color-danger)' }}
-                >
-                  No se encontró ningún producto con ese código de barras.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="lote" className="mb-2 block text-sm font-medium">
-                Lote
-              </label>
-
-              <input
-                id="lot"
-                name="lot"
-                required
-                value={formData.lot}
-                onChange={handleChange}
-                className={inputClass}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="dueDate"
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-text)' }}
-              >
-                Vencimiento
-              </label>
-
-              <input
-                id="dueDate"
-                name="dueDate"
-                type="date"
-                required
-                value={formData.dueDate}
-                onChange={handleChange}
-                className={`${inputClass} scheme-light dark:scheme-dark`}
-                style={inputStyle}
-              />
-
-              {daysUntilDueDate !== null && (
-                <p
-                  className="mt-2 text-xs"
-                  style={{
-                    color:
-                      daysUntilDueDate > 0
-                        ? 'var(--color-text-secondary)'
-                        : 'var(--color-danger)',
-                  }}
-                >
-                  {daysUntilDueDate > 0
-                    ? `${daysUntilDueDate} días hasta el vencimiento`
-                    : 'La fecha de vencimiento no es válida'}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="displays"
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-text)' }}
-              >
-                Displays
-              </label>
-
-              <input
-                id="displays"
-                name="displays"
-                type="number"
-                min="0"
-                step="1"
-                required
-                value={formData.displays}
-                onChange={(event) =>
-                  handleQuantityChange('displays', event.target.value)
-                }
-                className={inputClass}
-                style={inputStyle}
-              />
-
-              {selectedProduct && (
-                <p
-                  className="mt-2 text-xs"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  {selectedProduct.unitsPerDisplay} unidades por display
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="looseUnits"
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-text)' }}
-              >
-                Unidades sueltas
-              </label>
-
-              <input
-                id="looseUnits"
-                name="looseUnits"
-                type="number"
-                min="0"
-                step="1"
-                required
-                value={formData.looseUnits}
-                onChange={(event) =>
-                  handleQuantityChange('looseUnits', event.target.value)
-                }
-                className={inputClass}
-                style={inputStyle}
-              />
-
-              {invalidLooseUnits && (
-                <p
-                  className="mt-2 text-xs"
-                  style={{
-                    color: 'var(--color-danger)',
-                  }}
-                >
-                  Debe ser menor a {selectedProduct.unitsPerDisplay}.
-                </p>
-              )}
-            </div>
-
-            {selectedProduct && (
-              <div
-                className="rounded-lg border px-4 py-3 md:col-span-2"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-surface-secondary)',
-                }}
-              >
-                <p
-                  className="text-sm"
-                  style={{
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
-                  Total a ingresar
-                </p>
-
-                <p
-                  className="mt-1 text-lg font-semibold"
-                  style={{
-                    color: 'var(--color-text)',
-                  }}
-                >
-                  {totalCount} {totalCount === 1 ? 'unidad' : 'unidades'}
-                </p>
-
-                {displays > 0 && (
-                  <p
-                    className="mt-1 text-xs"
-                    style={{
-                      color: 'var(--color-text-muted)',
-                    }}
-                  >
-                    {displays} × {selectedProduct.unitsPerDisplay}
-                    {looseUnits > 0 ? ` + ${looseUnits}` : ''}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div>
-              <label
-                htmlFor="cntCode"
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-text)' }}
-              >
-                CNT
-              </label>
-
-              <input
-                id="cntCode"
-                name="cntCode"
-                required
-                value={formData.cntCode}
-                onChange={handleChange}
-                placeholder="Escanear o ingresar CNT..."
-                className={inputClass}
-                style={inputStyle}
-              />
-
-              {formData.cntCode && selectedCNT && (
-                <p
-                  className="mt-2 text-xs"
-                  style={{
-                    color:
-                      selectedCNT.status === 'ACTIVO' &&
-                      selectedCNT.locationType === 'EN_PUERTA'
-                        ? 'var(--color-success)'
-                        : 'var(--color-warning)',
-                  }}
-                >
-                  {selectedCNT.status !== 'ACTIVO'
-                    ? 'CNT finalizado'
-                    : selectedCNT.locationType !== 'EN_PUERTA'
-                      ? `CNT no disponible para recepción · ${selectedCNT.locationCode}`
-                      : `CNT válido · ${selectedCNT.locationCode}`}
-                </p>
-              )}
-
-              {formData.cntCode && !selectedCNT && (
-                <p
-                  className="mt-2 text-xs"
-                  style={{ color: 'var(--color-danger)' }}
-                >
-                  No existe ningún CNT con ese código.
-                </p>
-              )}
-            </div>
-
+          {selectedProduct && (
             <div
-              className="rounded-lg border px-4 py-3 md:col-span-2"
+              className="mt-3 rounded-lg border p-4"
               style={{
-                borderColor: 'var(--color-primary)',
-                backgroundColor: 'var(--color-primary-light)',
+                borderColor: 'var(--color-primary-light)',
+                backgroundColor: 'var(--color-primary-hover)',
               }}
             >
               <p
-                className="text-sm font-medium"
-                style={{ color: 'var(--color-primary-dark)' }}
+                className="font-medium"
+                style={{
+                  color: 'var(--color-text)',
+                }}
               >
-                Ubicación inicial: En puerta
+                {selectedProduct.description}
               </p>
 
-              <p
-                className="mt-1 text-xs"
-                style={{ color: 'var(--color-text-secondary)' }}
+              <div
+                className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                }}
               >
-                El CNT deberá ubicarse posteriormente para quedar disponible.
-              </p>
+                <span>Código: {selectedProduct.productId}</span>
+
+                <span>Display: {selectedProduct.unitsPerDisplay}</span>
+
+                <span>Categoría: {selectedProduct.category}</span>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div
-            className="flex flex-col-reverse gap-3 border-t px-4 py-4 sm:flex-row sm:justify-end sm:px-6"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <button
-              type="button"
-              onClick={handleClose}
-              className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium sm:w-auto"
+          {barCode && !selectedProduct && (
+            <p
+              className="mt-2 text-sm"
               style={{
-                borderColor: 'var(--color-border)',
+                color: 'var(--color-danger)',
+              }}
+            >
+              No se encontró ningún producto con ese código de barras.
+            </p>
+          )}
+        </div>
+
+        {/* Lote */}
+        <div>
+          <label
+            htmlFor="lot"
+            className="mb-2 block text-sm font-medium"
+            style={{
+              color: 'var(--color-text)',
+            }}
+          >
+            Lote
+          </label>
+
+          <input
+            id="lot"
+            name="lot"
+            required
+            disabled={isSaving}
+            value={formData.lot}
+            onChange={handleChange}
+            className={inputClass}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Vencimiento */}
+        <div>
+          <label
+            htmlFor="dueDate"
+            className="mb-2 block text-sm font-medium"
+            style={{
+              color: 'var(--color-text)',
+            }}
+          >
+            Vencimiento
+          </label>
+
+          <input
+            id="dueDate"
+            name="dueDate"
+            type="date"
+            required
+            disabled={isSaving}
+            value={formData.dueDate}
+            onChange={handleChange}
+            className={`${inputClass} scheme-light dark:scheme-dark`}
+            style={inputStyle}
+          />
+
+          {daysUntilDueDate !== null && (
+            <p
+              className="mt-2 text-xs"
+              style={{
+                color:
+                  daysUntilDueDate > 0
+                    ? 'var(--color-text-secondary)'
+                    : 'var(--color-danger)',
+              }}
+            >
+              {daysUntilDueDate > 0
+                ? `${daysUntilDueDate} días hasta el vencimiento`
+                : 'La fecha de vencimiento no es válida'}
+            </p>
+          )}
+        </div>
+
+        {/* Displays */}
+        <div>
+          <label
+            htmlFor="displays"
+            className="mb-2 block text-sm font-medium"
+            style={{
+              color: 'var(--color-text)',
+            }}
+          >
+            Displays
+          </label>
+
+          <input
+            id="displays"
+            name="displays"
+            type="number"
+            min="0"
+            step="1"
+            required
+            disabled={isSaving}
+            value={formData.displays}
+            onChange={(event) =>
+              handleQuantityChange('displays', event.target.value)
+            }
+            className={inputClass}
+            style={inputStyle}
+          />
+
+          {selectedProduct && (
+            <p
+              className="mt-2 text-xs"
+              style={{
                 color: 'var(--color-text-secondary)',
               }}
             >
-              Cancelar
-            </button>
+              {selectedProduct.unitsPerDisplay} unidades por display
+            </p>
+          )}
+        </div>
 
-            <button
-              type="submit"
-              className="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white sm:w-auto"
+        {/* Unidades sueltas */}
+        <div>
+          <label
+            htmlFor="looseUnits"
+            className="mb-2 block text-sm font-medium"
+            style={{
+              color: 'var(--color-text)',
+            }}
+          >
+            Unidades sueltas
+          </label>
+
+          <input
+            id="looseUnits"
+            name="looseUnits"
+            type="number"
+            min="0"
+            step="1"
+            required
+            disabled={isSaving}
+            value={formData.looseUnits}
+            onChange={(event) =>
+              handleQuantityChange('looseUnits', event.target.value)
+            }
+            className={inputClass}
+            style={inputStyle}
+          />
+
+          {invalidLooseUnits && selectedProduct && (
+            <p
+              className="mt-2 text-xs"
               style={{
-                backgroundColor: 'var(--color-primary)',
+                color: 'var(--color-danger)',
               }}
             >
-              Registrar ingreso
-            </button>
+              Debe ser menor a {selectedProduct.unitsPerDisplay}.
+            </p>
+          )}
+        </div>
+
+        {/* Total */}
+        {selectedProduct && (
+          <div
+            className="rounded-lg border px-4 py-3 md:col-span-2"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-surface-secondary)',
+            }}
+          >
+            <p
+              className="text-sm"
+              style={{
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              Total a ingresar
+            </p>
+
+            <p
+              className="mt-1 text-lg font-semibold"
+              style={{
+                color: 'var(--color-text)',
+              }}
+            >
+              {totalCount.toLocaleString('es-UY')}{' '}
+              {totalCount === 1 ? 'unidad' : 'unidades'}
+            </p>
+
+            {displays > 0 && (
+              <p
+                className="mt-1 text-xs"
+                style={{
+                  color: 'var(--color-text-muted)',
+                }}
+              >
+                {displays} × {selectedProduct.unitsPerDisplay}
+                {looseUnits > 0 ? ` + ${looseUnits}` : ''}
+              </p>
+            )}
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        {/* CNT */}
+        <div className="md:col-span-2">
+          <label
+            htmlFor="cntCode"
+            className="mb-2 block text-sm font-medium"
+            style={{
+              color: 'var(--color-text)',
+            }}
+          >
+            CNT
+          </label>
+
+          <input
+            id="cntCode"
+            name="cntCode"
+            required
+            disabled={isSaving}
+            value={formData.cntCode}
+            onChange={handleChange}
+            placeholder="Escanear o ingresar CNT..."
+            className={inputClass}
+            style={inputStyle}
+          />
+
+          {formData.cntCode && selectedCNT && (
+            <p
+              className="mt-2 text-xs"
+              style={{
+                color:
+                  selectedCNT.status === 'ACTIVO' &&
+                  selectedCNT.locationType === 'EN_PUERTA'
+                    ? 'var(--color-success)'
+                    : 'var(--color-warning)',
+              }}
+            >
+              {selectedCNT.status !== 'ACTIVO'
+                ? 'CNT finalizado'
+                : selectedCNT.locationType !== 'EN_PUERTA'
+                  ? `CNT no disponible para recepción · ${selectedCNT.locationCode}`
+                  : `CNT válido · ${selectedCNT.locationCode}`}
+            </p>
+          )}
+
+          {formData.cntCode && !selectedCNT && (
+            <p
+              className="mt-2 text-xs"
+              style={{
+                color: 'var(--color-danger)',
+              }}
+            >
+              No existe ningún CNT con ese código.
+            </p>
+          )}
+        </div>
+
+        {/* Información */}
+        <div
+          className="rounded-lg border px-4 py-3 md:col-span-2"
+          style={{
+            borderColor: 'var(--color-primary)',
+            backgroundColor: 'var(--color-primary-light)',
+          }}
+        >
+          <p
+            className="text-sm font-medium"
+            style={{
+              color: 'var(--color-primary-dark)',
+            }}
+          >
+            Ubicación inicial: En puerta
+          </p>
+
+          <p
+            className="mt-1 text-xs"
+            style={{
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            El CNT deberá ubicarse posteriormente para quedar disponible.
+          </p>
+        </div>
+      </form>
+    </Modal>
   );
 }

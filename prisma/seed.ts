@@ -163,19 +163,6 @@ function makePickingLocations() {
   );
 }
 
-function categoryForChamber(chamber: string): Category {
-  switch (chamber) {
-    case '160':
-      return 'FOOD';
-    case '161':
-      return 'NO_FOOD';
-    case '162':
-      return 'REFRIGERADO';
-    default:
-      return 'CONGELADO';
-  }
-}
-
 function randomBetween(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -233,14 +220,6 @@ async function main() {
         position: '01',
         height: '01',
       },
-      ...Array.from({ length: 8 }, (_, index) => ({
-        code: `PUE${(index + 1).toString().padStart(6, '0')}`,
-        type: 'EN_PUERTA' as const,
-      })),
-      ...Array.from({ length: 2 }, (_, index) => ({
-        code: `Z${(index + 1).toString().padStart(6, '0')}`,
-        type: 'FLOTANTE' as const,
-      })),
     ],
   });
 
