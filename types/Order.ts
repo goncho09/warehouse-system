@@ -12,22 +12,42 @@ export type Destination =
 
 export type OrderCategory = 'FOOD' | 'NO_FOOD' | 'CONGELADO' | 'REFRIGERADO';
 
-export interface OrderItem {
+export type PickTaskStatus =
+  | 'PENDIENTE'
+  | 'EN_PROCESO'
+  | 'COMPLETADO'
+  | 'PARCIAL'
+  | 'ANULADO';
+
+export type PickTask = {
+  id: number;
+  plannedCount: number;
+  pickedCount: number;
+  cancelledCount: number;
+  status: PickTaskStatus;
+};
+
+export type OrderItem = {
   id: number;
   productId: string;
   description: string;
   requestedCount: number;
   pickedCount: number;
   cancelledCount: number;
-}
+};
 
-export interface Order {
+export type Order = {
   id: number;
   stoCode: string;
   preparationCode: string;
   destination: Destination;
-  status: OrderStatus;
-  departureDate: string;
+
   category: OrderCategory;
+
+  status: OrderStatus;
+
+  departureDate: string;
+
   items: OrderItem[];
-}
+  pickTasks: PickTask[];
+};

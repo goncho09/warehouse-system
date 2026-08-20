@@ -109,14 +109,17 @@ function buildProducts(): ProductSeed[] {
       description,
       category: 'FOOD' as const,
     })),
+
     ...NO_FOOD_NAMES.map((description) => ({
       description,
       category: 'NO_FOOD' as const,
     })),
+
     ...REFRIGERATED_NAMES.map((description) => ({
       description,
       category: 'REFRIGERADO' as const,
     })),
+
     ...FROZEN_NAMES.map((description) => ({
       description,
       category: 'CONGELADO' as const,
@@ -124,13 +127,17 @@ function buildProducts(): ProductSeed[] {
   ];
 
   return all.map((item, index) => {
-    const n = index + 1;
+    const number = index + 1;
 
     return {
-      productId: `PRD-${(1000 + n).toString()}`,
-      barCode: `77312345${(67000 + n).toString().padStart(5, '0')}`,
+      productId: `PRD-${1000 + number}`,
+
+      barCode: `77312345${(67000 + number).toString().padStart(5, '0')}`,
+
       description: item.description,
+
       category: item.category,
+
       unitsPerDisplay:
         item.category === 'FOOD'
           ? [6, 10, 12, 20, 24][index % 5]
@@ -143,8 +150,11 @@ function buildProducts(): ProductSeed[] {
 
 function makePickingLocations() {
   const chambers = ['160', '161', '162', '163'];
+
   const rows = ['011', '012', '013', '014', '015', '016'];
+
   const positions = ['01', '02', '03'];
+
   const heights = ['01', '02'];
 
   return chambers.flatMap((chamber) =>
@@ -160,6 +170,42 @@ function makePickingLocations() {
         })),
       ),
     ),
+  );
+}
+
+function makeDoorLocations() {
+  return Array.from(
+    {
+      length: 8,
+    },
+    (_, index) => ({
+      code: `PUE${(index + 1).toString().padStart(6, '0')}`,
+
+      type: 'EN_PUERTA' as const,
+
+      chamber: null,
+      row: null,
+      position: null,
+      height: null,
+    }),
+  );
+}
+
+function makeFloatingLocations() {
+  return Array.from(
+    {
+      length: 2,
+    },
+    (_, index) => ({
+      code: `Z${(index + 1).toString().padStart(6, '0')}`,
+
+      type: 'FLOTANTE' as const,
+
+      chamber: null,
+      row: null,
+      position: null,
+      height: null,
+    }),
   );
 }
 
@@ -185,11 +231,48 @@ function dueDateForCategory(category: Category, offset: number) {
 }
 
 async function main() {
+  /*
+   * =========================================================
+   * LIMPIEZA
+   * =========================================================
+   */
+
   console.log('🧹 Limpiando base de datos...');
 
-  // Orden por claves foráneas.
+  /*
+   * Los bloqueos son temporales.
+   *
+   * Los limpiamos primero para evitar problemas de FK
+   * si alguna prueba de picking dejó recursos ocupados.
+   */
+  await prisma.cNT.updateMany({
+    data: {
+      blockedBySessionId: null,
+    },
+  });
+
+  await prisma.location.updateMany({
+    data: {
+      blockedOrderId: null,
+      blockedBySessionId: null,
+    },
+  });
+
+  /*
+   * Picking.
+   */
+  await prisma.pickTask.deleteMany();
+  await prisma.pickingSession.deleteMany();
+
+  /*
+   * Pedidos.
+   */
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+
+  /*
+   * Inventario.
+   */
   await prisma.cNTMovement.deleteMany();
   await prisma.entry.deleteMany();
   await prisma.cNTItem.deleteMany();
@@ -197,31 +280,54 @@ async function main() {
   await prisma.location.deleteMany();
   await prisma.product.deleteMany();
 
+  /*
+   * =========================================================
+   * UBICACIONES
+   * =========================================================
+   */
+
   console.log('📍 Creando ubicaciones...');
 
   const pickingLocations = makePickingLocations();
 
+  const doorLocations = makeDoorLocations();
+
+  const floatingLocations = makeFloatingLocations();
+
+  const damagedLocations = [
+    {
+      code: '160A0910101',
+      type: 'AVERIAS' as const,
+      chamber: '160',
+      row: '091',
+      position: '01',
+      height: '01',
+    },
+
+    {
+      code: '160A0900101',
+      type: 'AVERIAS' as const,
+      chamber: '160',
+      row: '090',
+      position: '01',
+      height: '01',
+    },
+  ];
+
   await prisma.location.createMany({
     data: [
       ...pickingLocations,
-      {
-        code: '160A0910101',
-        type: 'AVERIAS',
-        chamber: '160',
-        row: '091',
-        position: '01',
-        height: '01',
-      },
-      {
-        code: '160A0900101',
-        type: 'AVERIAS',
-        chamber: '160',
-        row: '090',
-        position: '01',
-        height: '01',
-      },
+      ...doorLocations,
+      ...floatingLocations,
+      ...damagedLocations,
     ],
   });
+
+  /*
+   * =========================================================
+   * PRODUCTOS
+   * =========================================================
+   */
 
   console.log('📦 Creando productos...');
 
@@ -232,14 +338,32 @@ async function main() {
   });
 
   const products = await prisma.product.findMany();
+
   const productByCode = Object.fromEntries(
     products.map((product) => [product.productId, product]),
   );
 
+  /*
+   * =========================================================
+   * CNT DE PICKING
+   * =========================================================
+   */
+
   console.log('📦 Creando CNT de picking...');
 
-  // Usamos 12 CNT por categoría. Hay muchas ubicaciones libres para poder moverlos.
-  const cntByCategory: Record<Category, { id: number; code: string }[]> = {
+  /*
+   * 12 CNT por categoría.
+   *
+   * Dejamos muchas ubicaciones de picking vacías para
+   * después poder probar movimientos.
+   */
+  const cntByCategory: Record<
+    Category,
+    {
+      id: number;
+      code: string;
+    }[]
+  > = {
     FOOD: [],
     NO_FOOD: [],
     REFRIGERADO: [],
@@ -273,8 +397,14 @@ async function main() {
       const cnt = await prisma.cNT.create({
         data: {
           code,
+
           status: 'ACTIVO',
-          locationCode: location.code,
+
+          location: {
+            connect: {
+              code: location.code,
+            },
+          },
         },
       });
 
@@ -287,19 +417,91 @@ async function main() {
     }
   }
 
+  /*
+   * =========================================================
+   * CNT EN PUERTA
+   * =========================================================
+   */
+
   console.log('🚪 Creando CNT en puerta...');
 
-  for (let i = 0; i < 4; i += 1) {
+  for (let index = 0; index < 4; index += 1) {
+    const doorLocation = doorLocations[index];
+
     await prisma.cNT.create({
       data: {
         code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+
         status: 'ACTIVO',
-        locationCode: `PUE${(i + 1).toString().padStart(6, '0')}`,
+
+        location: {
+          connect: {
+            code: doorLocation.code,
+          },
+        },
       },
     });
 
     cntNumber += 1;
   }
+
+  /*
+   * =========================================================
+   * CNT FLOTANTES
+   * =========================================================
+   */
+
+  console.log('🌫️ Creando CNT flotantes...');
+
+  for (const floatingLocation of floatingLocations) {
+    await prisma.cNT.create({
+      data: {
+        code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+
+        status: 'ACTIVO',
+
+        location: {
+          connect: {
+            code: floatingLocation.code,
+          },
+        },
+      },
+    });
+
+    cntNumber += 1;
+  }
+
+  /*
+   * =========================================================
+   * CNT DE AVERÍAS
+   * =========================================================
+   */
+
+  console.log('⚠️ Creando CNT de averías...');
+
+  for (const damagedLocation of damagedLocations) {
+    await prisma.cNT.create({
+      data: {
+        code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+
+        status: 'ACTIVO',
+
+        location: {
+          connect: {
+            code: damagedLocation.code,
+          },
+        },
+      },
+    });
+
+    cntNumber += 1;
+  }
+
+  /*
+   * =========================================================
+   * STOCK + INGRESOS
+   * =========================================================
+   */
 
   console.log('🧾 Creando stock e ingresos...');
 
@@ -324,6 +526,9 @@ async function main() {
 
     const parsedDueDate = new Date(`${dueDate}T00:00:00`);
 
+    /*
+     * Historial del ingreso.
+     */
     await prisma.entry.create({
       data: {
         cntId,
@@ -334,6 +539,9 @@ async function main() {
       },
     });
 
+    /*
+     * Stock físico actual del CNT.
+     */
     await prisma.cNTItem.create({
       data: {
         cntId,
@@ -354,11 +562,21 @@ async function main() {
 
   for (const product of products) {
     const category = product.category as Category;
+
     const pool = cntByCategory[category];
 
-    // Cada producto existe en 2 CNT distintos para que después el picking
-    // pueda completar desde más de una ubicación y aplicar FEFO.
+    /*
+     * Cada producto existe en dos CNT diferentes.
+     *
+     * Esto nos permite probar:
+     *
+     * - FEFO
+     * - varios pickeos para un mismo producto
+     * - faltantes parciales
+     * - recorrido entre ubicaciones
+     */
     const firstIndex = categoryIndexes[category] % pool.length;
+
     const secondIndex = (firstIndex + 5) % pool.length;
 
     categoryIndexes[category] += 1;
@@ -366,6 +584,9 @@ async function main() {
     const firstCnt = pool[firstIndex];
     const secondCnt = pool[secondIndex];
 
+    /*
+     * Stock según categoría.
+     */
     const baseStock =
       category === 'FOOD'
         ? randomBetween(260, 420)
@@ -374,32 +595,64 @@ async function main() {
           : randomBetween(70, 130);
 
     const firstCount = Math.floor(baseStock * 0.55);
+
     const secondCount = baseStock - firstCount;
 
     const productSequence = Number(product.productId.split('-')[1]) - 1000;
 
+    /*
+     * Primer lote: vence antes.
+     */
     await addEntry({
       cntId: firstCnt.id,
+
       productCode: product.productId,
-      lot: `${category.slice(0, 3)}-${productSequence.toString().padStart(3, '0')}-A`,
+
+      lot: `${category.slice(0, 3)}-${productSequence
+        .toString()
+        .padStart(3, '0')}-A`,
+
       dueDate: dueDateForCategory(category, productSequence),
+
       count: firstCount,
     });
 
-    // Segundo CNT con vencimiento un poco posterior.
+    /*
+     * Segundo lote: mismo producto en otro CNT,
+     * con vencimiento posterior.
+     *
+     * generatePickTasks debería consumir primero
+     * el lote A gracias a FEFO.
+     */
     await addEntry({
       cntId: secondCnt.id,
+
       productCode: product.productId,
-      lot: `${category.slice(0, 3)}-${productSequence.toString().padStart(3, '0')}-B`,
+
+      lot: `${category.slice(0, 3)}-${productSequence
+        .toString()
+        .padStart(3, '0')}-B`,
+
       dueDate: dueDateForCategory(category, productSequence + 3),
+
       count: secondCount,
     });
   }
 
+  /*
+   * =========================================================
+   * RESUMEN
+   * =========================================================
+   */
+
   const productCount = await prisma.product.count();
+
   const locationCount = await prisma.location.count();
+
   const cntCount = await prisma.cNT.count();
+
   const entryCount = await prisma.entry.count();
+
   const cntItemCount = await prisma.cNTItem.count();
 
   const stockByCategory = await Promise.all(
@@ -410,13 +663,16 @@ async function main() {
             product: {
               category,
             },
+
             cnt: {
               status: 'ACTIVO',
+
               location: {
                 type: 'PICKING',
               },
             },
           },
+
           select: {
             count: true,
           },
@@ -424,21 +680,45 @@ async function main() {
 
         return {
           category,
+
           stock: items.reduce((total, item) => total + item.count, 0),
         };
       },
     ),
   );
 
+  const locationsByType = await prisma.location.groupBy({
+    by: ['type'],
+
+    _count: {
+      _all: true,
+    },
+  });
+
   console.log('');
   console.log('✅ Seed completado');
   console.log('--------------------------------');
-  console.log(`Productos:   ${productCount}`);
-  console.log(`Ubicaciones: ${locationCount}`);
-  console.log(`CNT:         ${cntCount}`);
-  console.log(`Ingresos:    ${entryCount}`);
-  console.log(`CNT Items:   ${cntItemCount}`);
+
+  console.log(`Productos:    ${productCount}`);
+
+  console.log(`Ubicaciones:  ${locationCount}`);
+
+  console.log(`CNT:          ${cntCount}`);
+
+  console.log(`Ingresos:     ${entryCount}`);
+
+  console.log(`CNT Items:    ${cntItemCount}`);
+
   console.log('');
+
+  console.log('Ubicaciones por tipo:');
+
+  for (const item of locationsByType) {
+    console.log(`${item.type.padEnd(13)} ${item._count._all}`);
+  }
+
+  console.log('');
+
   console.log('Stock PICKING por categoría:');
 
   for (const item of stockByCategory) {
@@ -449,7 +729,9 @@ async function main() {
 main()
   .catch((error) => {
     console.error('❌ Error ejecutando seed:');
+
     console.error(error);
+
     process.exit(1);
   })
   .finally(async () => {

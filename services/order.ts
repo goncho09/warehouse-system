@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { generatePickTasks } from '@/services/picking';
 
 const DESTINATIONS = [
   'LA_BLANQUEADA',
@@ -55,6 +56,7 @@ function generateOrderLines<
   },
 >(products: T[], category: Category) {
   const target = targetForCategory(category);
+
   const selected = shuffle(products).slice(
     0,
     lineCountForCategory(category, products.length),
@@ -72,6 +74,7 @@ function generateOrderLines<
 
   for (let index = 0; index < selected.length; index += 1) {
     const product = selected[index];
+
     const remainingProducts = selected.length - index;
 
     if (remaining <= 0) {
@@ -85,8 +88,6 @@ function generateOrderLines<
       Math.round(ideal * (randomInt(80, 120) / 100)),
     );
 
-    // Dejamos al menos una unidad para cada producto restante,
-    // salvo que ya estemos en el último.
     const maxForThisLine =
       remainingProducts === 1
         ? remaining
@@ -106,21 +107,25 @@ function generateOrderLines<
     remaining -= requestedCount;
   }
 
-  // Si por jitter/capacidad quedó una diferencia, tratamos de repartirla
-  // entre líneas que todavía tengan stock disponible.
   if (remaining > 0) {
     for (const line of lines) {
-      if (remaining <= 0) break;
+      if (remaining <= 0) {
+        break;
+      }
 
       const product = selected.find(
         (candidate) => candidate.id === line.productId,
       );
 
-      if (!product) continue;
+      if (!product) {
+        continue;
+      }
 
       const extraCapacity = product.stock - line.requestedCount;
 
-      if (extraCapacity <= 0) continue;
+      if (extraCapacity <= 0) {
+        continue;
+      }
 
       const extra = Math.min(extraCapacity, remaining);
 
@@ -134,12 +139,14 @@ function generateOrderLines<
 
 export async function generateDailyOrders(departureDate: Date) {
   const normalizedDate = new Date(departureDate);
+
   normalizedDate.setHours(0, 0, 0, 0);
 
   const existingOrders = await prisma.order.findMany({
     where: {
       departureDate: normalizedDate,
     },
+
     select: {
       destination: true,
       category: true,
@@ -209,55 +216,70 @@ export async function generateDailyOrders(departureDate: Date) {
         continue;
       }
 
-      const result = await prisma.$transaction(async (tx) => {
+      const order = await prisma.$transaction(async (tx) => {
         const temporaryOrder = await tx.order.create({
           data: {
             stoCode: `TEMP-STO-${crypto.randomUUID()}`,
+
             preparationCode: `TEMP-PREP-${crypto.randomUUID()}`,
+
             destination,
             category,
             departureDate: normalizedDate,
+
             status: 'PENDIENTE',
           },
         });
 
         const number = temporaryOrder.id.toString().padStart(6, '0');
 
-        const order = await tx.order.update({
+        const updatedOrder = await tx.order.update({
           where: {
             id: temporaryOrder.id,
           },
+
           data: {
             stoCode: `STO-${number}`,
+
             preparationCode: `PREP-${number}`,
           },
         });
 
         await tx.orderItem.createMany({
           data: lines.map((line) => ({
-            orderId: order.id,
+            orderId: updatedOrder.id,
+
             productId: line.productId,
+
             requestedCount: line.requestedCount,
+
             pickedCount: 0,
             cancelledCount: 0,
           })),
         });
 
-        return tx.order.findUniqueOrThrow({
-          where: {
-            id: order.id,
-          },
-          include: {
-            items: {
-              include: {
-                product: true,
-              },
-            },
-          },
-        });
+        return updatedOrder;
       });
 
-      createdOrders.push(result);
+      await generatePickTasks(order.id);
+
+      const createdOrder = await prisma.order.findUniqueOrThrow({
+        where: {
+          id: order.id,
+        },
+
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+
+          pickTasks: true,
+        },
+      });
+
+      createdOrders.push(createdOrder);
       existingKeys.add(key);
     }
   }

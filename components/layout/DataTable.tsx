@@ -182,18 +182,19 @@ export default function DataTable<T>({
       }}
     >
       <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
-        <table className="w-full min-w-max">
+        <table className="w-full min-w-max border-separate border-spacing-0">
           <thead
-            className="sticky top-0 z-10"
+            className="sticky top-0 z-30"
             style={{
               backgroundColor: 'var(--color-surface)',
             }}
           >
             <tr
-              className="border-b text-left text-xs uppercase"
+              className="border-b text-xs uppercase"
               style={{
                 borderColor: 'var(--color-border)',
                 color: 'var(--color-text-muted)',
+                backgroundColor: 'var(--color-surface)',
               }}
             >
               {columns.map((column) => {
@@ -202,7 +203,11 @@ export default function DataTable<T>({
                 return (
                   <th
                     key={column.key}
-                    className="whitespace-nowrap px-4 py-4 font-medium"
+                    className="whitespace-nowrap border-b px-4 py-4 text-center font-medium"
+                    style={{
+                      backgroundColor: 'var(--color-surface)',
+                      borderColor: 'var(--color-border)',
+                    }}
                   >
                     {column.sortable ? (
                       <button
@@ -229,13 +234,19 @@ export default function DataTable<T>({
             </tr>
 
             <tr
-              className="border-b"
               style={{
-                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-surface)',
               }}
             >
               {columns.map((column) => (
-                <th key={column.key} className="px-4 py-3">
+                <th
+                  key={column.key}
+                  className="border-b px-4 py-3"
+                  style={{
+                    backgroundColor: 'var(--color-surface)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
                   {column.filterable ? (
                     column.filterType === 'select' ? (
                       <select
@@ -309,7 +320,7 @@ export default function DataTable<T>({
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="relative z-0">
             {filteredAndSortedData.map((row) => (
               <tr
                 key={getRowKey(row)}

@@ -54,15 +54,21 @@ export default function OrdersTable({ orders, onViewOrder }: Props) {
     const preparationPercentage =
       totalUnits === 0 ? 0 : Math.round((resolvedUnits / totalUnits) * 100);
 
+    const totalPicks = order.pickTasks.length;
+
+    const completedPicks = order.pickTasks.filter(
+      (task) => task.status === 'COMPLETADO',
+    ).length;
+
+    const picksPercentage =
+      totalPicks === 0 ? 0 : Math.round((completedPicks / totalPicks) * 100);
+
     return {
       ...order,
       totalUnits,
-
-      // Después salen de PickTask.
-      completedPicks: 0,
-      totalPicks: 0,
-      picksPercentage: 0,
-
+      completedPicks,
+      totalPicks,
+      picksPercentage,
       preparationPercentage,
     };
   });

@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
+  provider            = "prisma-client-js"
+  output              = "../app/generated/prisma"
   importFileExtension = "ts"
 }
 
@@ -44,10 +44,23 @@ enum Destination {
   BRAZO_ORIENTAL
 }
 
+enum PickingSessionStatus {
+  ACTIVA
+  FINALIZADA
+}
+
+enum PickTaskStatus {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADO
+  PARCIAL
+  ANULADO
+}
+
 model Product {
-  id              Int             @id @default(autoincrement())
-  productId       String          @unique
-  barCode         String          @unique
+  id              Int      @id @default(autoincrement())
+  productId       String   @unique
+  barCode         String   @unique
   description     String
   category        Category
   unitsPerDisplay Int
@@ -72,7 +85,16 @@ model Location {
 
   cnts CNT[]
 
+  blockedOrderId Int?
+  blockedOrder   Order? @relation("LocationBlockedByOrder",fields: [blockedOrderId],references: [id])
+
+  blockedBySessionId Int?
+  blockedBySession   PickingSession? @relation("LocationBlockedBySession",fields: [blockedBySessionId],references: [id])
+
   createdAt DateTime @default(now())
+
+  @@index([blockedOrderId])
+  @@index([blockedBySessionId])
 }
 
 model CNT {
@@ -81,26 +103,33 @@ model CNT {
 
   status CNTStatus @default(ACTIVO)
 
-  locationCode String? 
-  location Location? @relation(fields: [locationCode], references: [code])
+  locationCode String?
+  location     Location? @relation(fields: [locationCode],references: [code])
 
-  items   CNTItem[]
-  entries Entry[]
-
+  items     CNTItem[]
+  entries   Entry[]
   movements CNTMovement[]
+
+  pickTasks PickTask[]
+
+
+  blockedBySessionId Int?
+  blockedBySession   PickingSession? @relation("CNTBlockedBySession",fields: [blockedBySessionId],references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([blockedBySessionId])
 }
 
 model CNTItem {
   id Int @id @default(autoincrement())
 
   cntId Int
-  cnt   CNT    @relation(fields: [cntId], references: [id], onDelete: Cascade)
+  cnt   CNT @relation(fields: [cntId],references: [id],onDelete: Cascade)
 
   productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId],references: [id])
 
   lot     String
   dueDate DateTime
@@ -117,10 +146,10 @@ model Entry {
   id Int @id @default(autoincrement())
 
   productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId],references: [id])
 
   cntId Int
-  cnt   CNT    @relation(fields: [cntId], references: [id])
+  cnt   CNT @relation(fields: [cntId],references: [id])
 
   lot     String
   dueDate DateTime
@@ -139,7 +168,7 @@ model CNTMovement {
   toLocationCode   String
   createdAt        DateTime @default(now())
 
-  cnt CNT @relation(fields: [cntId], references: [id], onDelete: Cascade)
+  cnt CNT @relation(fields: [cntId],references: [id],onDelete: Cascade)
 
   @@index([cntId])
 }
@@ -151,11 +180,16 @@ model Order {
   destination     Destination
   status          OrderStatus @default(PENDIENTE)
   departureDate   DateTime
-  category Category
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  category        Category
 
-  items OrderItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items           OrderItem[]
+  pickingSessions PickingSession[]
+  pickTasks        PickTask[]
+
+  blockedLocations Location[] @relation("LocationBlockedByOrder")
 
   @@unique([destination, category, departureDate])
   @@index([departureDate])
@@ -170,9 +204,72 @@ model OrderItem {
   pickedCount    Int @default(0)
   cancelledCount Int @default(0)
 
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  order Order @relation(fields: [orderId],references: [id],onDelete: Cascade)
+
+  product Product @relation(fields: [productId],references: [id])
+
+  pickTasks PickTask[]
 
   @@unique([orderId, productId])
   @@index([productId])
+}
+
+model PickingSession {
+  id Int @id @default(autoincrement())
+
+  orderId Int
+  order   Order @relation(fields: [orderId],references: [id],onDelete: Cascade)
+
+  pickerCode String
+
+  startLocationCode String?
+
+  status PickingSessionStatus @default(ACTIVA)
+
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+
+  pickTasks PickTask[]
+
+  blockedCNTs CNT[] @relation("CNTBlockedBySession")
+
+  blockedLocations Location[] @relation("LocationBlockedBySession")
+
+  @@index([orderId])
+  @@index([pickerCode])
+  @@index([status])
+}
+
+model PickTask {
+  id Int @id @default(autoincrement())
+
+  orderId Int
+  order   Order @relation(fields: [orderId],references: [id],onDelete: Cascade)
+
+  orderItemId Int
+  orderItem   OrderItem @relation(fields: [orderItemId],references: [id],onDelete: Cascade)
+
+  cntId Int
+  cnt   CNT @relation(fields: [cntId],references: [id])
+
+  locationCode String
+
+  sessionId Int?
+  session   PickingSession? @relation(fields: [sessionId],references: [id])
+
+  plannedCount Int
+  pickedCount Int @default(0)
+  cancelledCount Int @default(0)
+
+  status PickTaskStatus @default(PENDIENTE)
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([orderId])
+  @@index([orderItemId])
+  @@index([cntId])
+  @@index([locationCode])
+  @@index([sessionId])
+  @@index([status])
 }
