@@ -8,15 +8,27 @@ function compareLocationCodes(a: string, b: string) {
 }
 
 export async function generatePickTasks(orderId: number) {
+  const tasks = await generatePickTasksForOrders([orderId]);
+
+  return tasks.filter((task) => task.orderId === orderId);
+}
+
+export async function generatePickTasksForOrders(orderIds: number[]) {
+  const uniqueOrderIds = [...new Set(orderIds)];
+
+  if (uniqueOrderIds.length === 0) {
+    return [];
+  }
+
   /*
-   * Primero traemos el pedido.
-   *
-   * No necesitamos mantener una transacción abierta
-   * mientras hacemos todas las consultas y cálculos.
+   * UNA consulta para traer todos los pedidos
+   * junto con sus productos.
    */
-  const order = await prisma.order.findUnique({
+  const orders = await prisma.order.findMany({
     where: {
-      id: orderId,
+      id: {
+        in: uniqueOrderIds,
+      },
     },
 
     include: {
@@ -26,35 +38,63 @@ export async function generatePickTasks(orderId: number) {
         },
       },
 
-      pickTasks: true,
+      pickTasks: {
+        select: {
+          id: true,
+        },
+      },
     },
   });
 
-  if (!order) {
-    throw new Error('La preparación no existe.');
+  if (orders.length !== uniqueOrderIds.length) {
+    throw new Error('No se encontraron todas las preparaciones.');
   }
 
-  if (order.status === 'COMPLETADO') {
-    throw new Error('La preparación ya está completada.');
+  const completedOrder = orders.find((order) => order.status === 'COMPLETADO');
+
+  if (completedOrder) {
+    throw new Error(
+      `La preparación ${completedOrder.preparationCode} ya está completada.`,
+    );
+  }
+
+  const ordersToPlan = orders.filter((order) => order.pickTasks.length === 0);
+
+  if (ordersToPlan.length === 0) {
+    return prisma.pickTask.findMany({
+      where: {
+        orderId: {
+          in: uniqueOrderIds,
+        },
+      },
+    });
   }
 
   /*
-   * Si ya fueron generados, no hacemos nada.
+   * Todos los productos pendientes de TODOS
+   * los pedidos.
    */
-  if (order.pickTasks.length > 0) {
-    return order.pickTasks;
+  const productIds = [
+    ...new Set(
+      ordersToPlan.flatMap((order) =>
+        order.items
+          .filter(
+            (item) =>
+              item.requestedCount - item.pickedCount - item.cancelledCount > 0,
+          )
+          .map((item) => item.productId),
+      ),
+    ),
+  ];
+
+  if (productIds.length === 0) {
+    throw new Error('Los pedidos no tienen unidades pendientes para preparar.');
   }
 
-  const pendingItems = order.items.filter(
-    (item) => item.requestedCount - item.pickedCount - item.cancelledCount > 0,
-  );
-
-  if (pendingItems.length === 0) {
-    throw new Error('El pedido no tiene unidades pendientes para preparar.');
-  }
-
-  const productIds = pendingItems.map((item) => item.productId);
-
+  /*
+   * UNA consulta de stock para TODOS los productos
+   * de TODOS los pedidos.
+   */
   const stockItems = await prisma.cNTItem.findMany({
     where: {
       productId: {
@@ -88,14 +128,33 @@ export async function generatePickTasks(orderId: number) {
   /*
    * Agrupamos el stock por producto.
    */
-  const stockByProduct = new Map<number, typeof stockItems>();
+  const stockByProduct = new Map<number, (typeof stockItems)[number][]>();
 
   for (const stockItem of stockItems) {
+    if (!stockItem.cnt.locationCode || !stockItem.cnt.location) {
+      continue;
+    }
+
     const current = stockByProduct.get(stockItem.productId) ?? [];
 
     current.push(stockItem);
 
     stockByProduct.set(stockItem.productId, current);
+  }
+
+  /*
+   * Ordenamos cada producto una sola vez por FEFO.
+   */
+  for (const stock of stockByProduct.values()) {
+    stock.sort((a, b) => {
+      const dueDateComparison = a.dueDate.getTime() - b.dueDate.getTime();
+
+      if (dueDateComparison !== 0) {
+        return dueDateComparison;
+      }
+
+      return compareLocationCodes(a.cnt.locationCode!, b.cnt.locationCode!);
+    });
   }
 
   const tasksToCreate: {
@@ -106,91 +165,94 @@ export async function generatePickTasks(orderId: number) {
     plannedCount: number;
   }[] = [];
 
-  for (const orderItem of pendingItems) {
-    const pendingCount =
-      orderItem.requestedCount -
-      orderItem.pickedCount -
-      orderItem.cancelledCount;
+  for (const order of ordersToPlan) {
+    for (const orderItem of order.items) {
+      const pendingCount =
+        orderItem.requestedCount -
+        orderItem.pickedCount -
+        orderItem.cancelledCount;
 
-    const availableStock = [...(stockByProduct.get(orderItem.productId) ?? [])]
-      .filter((item) => item.cnt.locationCode && item.cnt.location)
-      .sort((a, b) => {
-        /*
-         * FEFO:
-         * vence antes → se usa antes.
-         */
-        const dueDateComparison = a.dueDate.getTime() - b.dueDate.getTime();
-
-        if (dueDateComparison !== 0) {
-          return dueDateComparison;
-        }
-
-        /*
-         * Si vence igual, usamos el orden
-         * físico de ubicación.
-         */
-        return compareLocationCodes(a.cnt.locationCode!, b.cnt.locationCode!);
-      });
-
-    let remaining = pendingCount;
-
-    for (const stockItem of availableStock) {
-      if (remaining <= 0) {
-        break;
-      }
-
-      const plannedCount = Math.min(stockItem.count, remaining);
-
-      if (plannedCount <= 0) {
+      if (pendingCount <= 0) {
         continue;
       }
 
-      tasksToCreate.push({
-        orderId: order.id,
+      const availableStock = stockByProduct.get(orderItem.productId) ?? [];
 
-        orderItemId: orderItem.id,
+      let remaining = pendingCount;
 
-        cntId: stockItem.cntId,
+      for (const stockItem of availableStock) {
+        if (remaining <= 0) {
+          break;
+        }
 
-        locationCode: stockItem.cnt.locationCode!,
+        const plannedCount = Math.min(stockItem.count, remaining);
 
-        plannedCount,
-      });
+        if (plannedCount <= 0) {
+          continue;
+        }
 
-      remaining -= plannedCount;
-    }
+        tasksToCreate.push({
+          orderId: order.id,
 
-    if (remaining > 0) {
-      throw new Error(
-        `Stock insuficiente para "${orderItem.product.description}". ` +
-          `Faltan ${remaining} unidades para generar la preparación.`,
-      );
+          orderItemId: orderItem.id,
+
+          cntId: stockItem.cntId,
+
+          locationCode: stockItem.cnt.locationCode!,
+
+          plannedCount,
+        });
+
+        remaining -= plannedCount;
+      }
+
+      if (remaining > 0) {
+        throw new Error(
+          `Stock insuficiente para "${orderItem.product.description}" ` +
+            `en ${order.preparationCode}. ` +
+            `Faltan ${remaining} unidades.`,
+        );
+      }
     }
   }
 
   if (tasksToCreate.length === 0) {
-    throw new Error('No se pudieron generar pickeos para el pedido.');
+    throw new Error('No se pudieron generar pickeos para los pedidos.');
   }
 
   await prisma.$transaction(async (tx) => {
-    const existingTasks = await tx.pickTask.count({
+    const existingTasks = await tx.pickTask.findMany({
       where: {
-        orderId,
+        orderId: {
+          in: ordersToPlan.map((order) => order.id),
+        },
+      },
+
+      select: {
+        orderId: true,
       },
     });
 
-    if (existingTasks > 0) {
+    const existingOrderIds = new Set(existingTasks.map((task) => task.orderId));
+
+    const newTasks = tasksToCreate.filter(
+      (task) => !existingOrderIds.has(task.orderId),
+    );
+
+    if (newTasks.length === 0) {
       return;
     }
 
     await tx.pickTask.createMany({
-      data: tasksToCreate,
+      data: newTasks,
     });
   });
 
   return prisma.pickTask.findMany({
     where: {
-      orderId,
+      orderId: {
+        in: uniqueOrderIds,
+      },
     },
   });
 }

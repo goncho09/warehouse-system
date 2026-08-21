@@ -1,5 +1,8 @@
+import { randomUUID } from 'node:crypto';
+
 import { prisma } from '@/lib/prisma';
-import { generatePickTasks } from '@/services/picking';
+
+import { generatePickTasksForOrders } from '@/services/picking';
 
 const DESTINATIONS = [
   'LA_BLANQUEADA',
@@ -16,12 +19,33 @@ const CATEGORIES = ['FOOD', 'NO_FOOD', 'CONGELADO', 'REFRIGERADO'] as const;
 
 type Category = (typeof CATEGORIES)[number];
 
+type Destination = (typeof DESTINATIONS)[number];
+
+type OrderLine = {
+  productId: number;
+  requestedCount: number;
+};
+
+type OrderPlan = {
+  destination: Destination;
+  category: Category;
+  lines: OrderLine[];
+};
+
 function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function shuffle<T>(items: T[]) {
-  return [...items].sort(() => Math.random() - 0.5);
+  const result = [...items];
+
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+
+    [result[index], result[randomIndex]] = [result[randomIndex], result[index]];
+  }
+
+  return result;
 }
 
 function targetForCategory(category: Category) {
@@ -67,10 +91,9 @@ function generateOrderLines<
     selected.reduce((total, product) => total + product.stock, 0),
   );
 
-  const lines: {
-    productId: number;
-    requestedCount: number;
-  }[] = [];
+  const lines: OrderLine[] = [];
+
+  const productById = new Map(selected.map((product) => [product.id, product]));
 
   for (let index = 0; index < selected.length; index += 1) {
     const product = selected[index];
@@ -101,6 +124,7 @@ function generateOrderLines<
 
     lines.push({
       productId: product.id,
+
       requestedCount,
     });
 
@@ -113,9 +137,7 @@ function generateOrderLines<
         break;
       }
 
-      const product = selected.find(
-        (candidate) => candidate.id === line.productId,
-      );
+      const product = productById.get(line.productId);
 
       if (!product) {
         continue;
@@ -130,6 +152,7 @@ function generateOrderLines<
       const extra = Math.min(extraCapacity, remaining);
 
       line.requestedCount += extra;
+
       remaining -= extra;
     }
   }
@@ -157,42 +180,83 @@ export async function generateDailyOrders(departureDate: Date) {
     existingOrders.map((order) => `${order.destination}-${order.category}`),
   );
 
-  const products = await prisma.product.findMany({
-    include: {
-      cntItems: {
-        include: {
-          cnt: {
-            include: {
-              location: true,
-            },
+  const stockItems = await prisma.cNTItem.findMany({
+    where: {
+      count: {
+        gt: 0,
+      },
+
+      cnt: {
+        status: 'ACTIVO',
+
+        location: {
+          is: {
+            type: 'PICKING',
           },
+        },
+      },
+    },
+
+    select: {
+      count: true,
+
+      product: {
+        select: {
+          id: true,
+          category: true,
         },
       },
     },
   });
 
-  const productsWithStock = products
-    .map((product) => {
-      const stock = product.cntItems
-        .filter(
-          (item) =>
-            item.cnt.status === 'ACTIVO' &&
-            item.cnt.location?.type === 'PICKING',
-        )
-        .reduce((total, item) => total + item.count, 0);
+  const productStock = new Map<
+    number,
+    {
+      id: number;
+      category: Category;
+      stock: number;
+    }
+  >();
 
-      return {
-        ...product,
-        stock,
-      };
-    })
-    .filter((product) => product.stock > 0);
+  for (const item of stockItems) {
+    const existing = productStock.get(item.product.id);
+
+    if (existing) {
+      existing.stock += item.count;
+
+      continue;
+    }
+
+    productStock.set(item.product.id, {
+      id: item.product.id,
+
+      category: item.product.category as Category,
+
+      stock: item.count,
+    });
+  }
+
+  const productsWithStock = [...productStock.values()];
 
   if (productsWithStock.length === 0) {
     throw new Error('No hay productos con stock disponible en picking.');
   }
 
-  const createdOrders = [];
+  /*
+   * Agrupamos los productos por categoría una vez.
+   */
+  const productsByCategory: Record<Category, typeof productsWithStock> = {
+    FOOD: [],
+    NO_FOOD: [],
+    CONGELADO: [],
+    REFRIGERADO: [],
+  };
+
+  for (const product of productsWithStock) {
+    productsByCategory[product.category].push(product);
+  }
+
+  const plans: OrderPlan[] = [];
 
   for (const destination of DESTINATIONS) {
     for (const category of CATEGORIES) {
@@ -202,9 +266,7 @@ export async function generateDailyOrders(departureDate: Date) {
         continue;
       }
 
-      const categoryProducts = productsWithStock.filter(
-        (product) => product.category === category,
-      );
+      const categoryProducts = productsByCategory[category];
 
       if (categoryProducts.length === 0) {
         continue;
@@ -216,73 +278,120 @@ export async function generateDailyOrders(departureDate: Date) {
         continue;
       }
 
-      const order = await prisma.$transaction(async (tx) => {
-        const temporaryOrder = await tx.order.create({
-          data: {
-            stoCode: `TEMP-STO-${crypto.randomUUID()}`,
-
-            preparationCode: `TEMP-PREP-${crypto.randomUUID()}`,
-
-            destination,
-            category,
-            departureDate: normalizedDate,
-
-            status: 'PENDIENTE',
-          },
-        });
-
-        const number = temporaryOrder.id.toString().padStart(6, '0');
-
-        const updatedOrder = await tx.order.update({
-          where: {
-            id: temporaryOrder.id,
-          },
-
-          data: {
-            stoCode: `STO-${number}`,
-
-            preparationCode: `PREP-${number}`,
-          },
-        });
-
-        await tx.orderItem.createMany({
-          data: lines.map((line) => ({
-            orderId: updatedOrder.id,
-
-            productId: line.productId,
-
-            requestedCount: line.requestedCount,
-
-            pickedCount: 0,
-            cancelledCount: 0,
-          })),
-        });
-
-        return updatedOrder;
+      plans.push({
+        destination,
+        category,
+        lines,
       });
+    }
+  }
 
-      await generatePickTasks(order.id);
+  if (plans.length === 0) {
+    return [];
+  }
 
-      const createdOrder = await prisma.order.findUniqueOrThrow({
+  const createdOrders = await prisma.order.createManyAndReturn({
+    data: plans.map((plan) => ({
+      stoCode: `TEMP-STO-${randomUUID()}`,
+
+      preparationCode: `TEMP-PREP-${randomUUID()}`,
+
+      destination: plan.destination,
+
+      category: plan.category,
+
+      departureDate: normalizedDate,
+
+      status: 'PENDIENTE' as const,
+    })),
+
+    select: {
+      id: true,
+      destination: true,
+      category: true,
+    },
+  });
+
+  const orderByKey = new Map(
+    createdOrders.map((order) => [
+      `${order.destination}-${order.category}`,
+      order,
+    ]),
+  );
+
+  await Promise.all(
+    createdOrders.map((order) => {
+      const number = order.id.toString().padStart(6, '0');
+
+      return prisma.order.update({
         where: {
           id: order.id,
         },
 
-        include: {
-          items: {
-            include: {
-              product: true,
-            },
-          },
+        data: {
+          stoCode: `STO-${number}`,
 
-          pickTasks: true,
+          preparationCode: `PREP-${number}`,
         },
       });
+    }),
+  );
 
-      createdOrders.push(createdOrder);
-      existingKeys.add(key);
+  const orderItemSeeds = plans.flatMap((plan) => {
+    const order = orderByKey.get(`${plan.destination}-${plan.category}`);
+
+    if (!order) {
+      throw new Error(
+        `No se encontró el pedido ${plan.destination}-${plan.category}.`,
+      );
     }
-  }
 
-  return createdOrders;
+    return plan.lines.map((line) => ({
+      orderId: order.id,
+
+      productId: line.productId,
+
+      requestedCount: line.requestedCount,
+
+      pickedCount: 0,
+
+      cancelledCount: 0,
+    }));
+  });
+
+  await prisma.orderItem.createMany({
+    data: orderItemSeeds,
+  });
+
+  const createdOrderIds = createdOrders.map((order) => order.id);
+
+  await generatePickTasksForOrders(createdOrderIds);
+
+  /*
+   * =====================================================
+   * 8. RESPUESTA FINAL
+   * =====================================================
+   */
+
+  return prisma.order.findMany({
+    where: {
+      id: {
+        in: createdOrderIds,
+      },
+    },
+
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+
+      pickTasks: true,
+    },
+
+    orderBy: {
+      id: 'asc',
+    },
+  });
 }
