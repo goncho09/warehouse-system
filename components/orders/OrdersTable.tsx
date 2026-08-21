@@ -57,7 +57,7 @@ export default function OrdersTable({ orders, onViewOrder }: Props) {
     const totalPicks = order.pickTasks.length;
 
     const completedPicks = order.pickTasks.filter(
-      (task) => task.status === 'COMPLETADO',
+      (task) => task.pickedCount === task.plannedCount,
     ).length;
 
     const picksPercentage =

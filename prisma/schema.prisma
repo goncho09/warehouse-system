@@ -49,14 +49,6 @@ enum PickingSessionStatus {
   FINALIZADA
 }
 
-enum PickTaskStatus {
-  PENDIENTE
-  EN_PROCESO
-  COMPLETADO
-  PARCIAL
-  ANULADO
-}
-
 model Product {
   id              Int      @id @default(autoincrement())
   productId       String   @unique
@@ -261,7 +253,6 @@ model PickTask {
   pickedCount Int @default(0)
   cancelledCount Int @default(0)
 
-  status PickTaskStatus @default(PENDIENTE)
 
   createdAt   DateTime  @default(now())
   completedAt DateTime?
@@ -271,5 +262,4 @@ model PickTask {
   @@index([cntId])
   @@index([locationCode])
   @@index([sessionId])
-  @@index([status])
 }

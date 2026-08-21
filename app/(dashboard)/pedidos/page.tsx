@@ -33,27 +33,18 @@ export default async function OrdersPage() {
 
     items: order.items.map((item) => ({
       id: item.id,
-
       productId: item.product.productId,
-
       description: item.product.description,
-
       requestedCount: item.requestedCount,
-
       pickedCount: item.pickedCount,
-
       cancelledCount: item.cancelledCount,
     })),
+
     pickTasks: order.pickTasks.map((task) => ({
       id: task.id,
-
       plannedCount: task.plannedCount,
-
       pickedCount: task.pickedCount,
-
       cancelledCount: task.cancelledCount,
-
-      status: task.status,
     })),
   }));
 

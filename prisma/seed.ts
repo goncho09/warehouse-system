@@ -19,6 +19,13 @@ type ProductSeed = {
   unitsPerDisplay: number;
 };
 
+type PickingCNTSeed = {
+  code: string;
+  status: 'ACTIVO';
+  locationCode: string;
+  category: Category;
+};
+
 const FOOD_NAMES = [
   'Coca-Cola 1.5L',
   'Coca-Cola Zero 1.5L',
@@ -102,6 +109,8 @@ const FROZEN_NAMES = [
   'Vegetales Congelados 500g',
   'Empanadas Congeladas x6',
 ];
+
+const CATEGORIES = ['FOOD', 'NO_FOOD', 'REFRIGERADO', 'CONGELADO'] as const;
 
 function buildProducts(): ProductSeed[] {
   const all = [
@@ -230,6 +239,22 @@ function dueDateForCategory(category: Category, offset: number) {
   return base.toISOString().slice(0, 10);
 }
 
+function chamberForCategory(category: Category) {
+  switch (category) {
+    case 'FOOD':
+      return '160';
+
+    case 'NO_FOOD':
+      return '161';
+
+    case 'REFRIGERADO':
+      return '162';
+
+    case 'CONGELADO':
+      return '163';
+  }
+}
+
 async function main() {
   /*
    * =========================================================
@@ -239,12 +264,6 @@ async function main() {
 
   console.log('🧹 Limpiando base de datos...');
 
-  /*
-   * Los bloqueos son temporales.
-   *
-   * Los limpiamos primero para evitar problemas de FK
-   * si alguna prueba de picking dejó recursos ocupados.
-   */
   await prisma.cNT.updateMany({
     data: {
       blockedBySessionId: null,
@@ -259,24 +278,19 @@ async function main() {
   });
 
   /*
-   * Picking.
+   * Eliminación respetando dependencias.
    */
   await prisma.pickTask.deleteMany();
   await prisma.pickingSession.deleteMany();
 
-  /*
-   * Pedidos.
-   */
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
 
-  /*
-   * Inventario.
-   */
   await prisma.cNTMovement.deleteMany();
   await prisma.entry.deleteMany();
   await prisma.cNTItem.deleteMany();
   await prisma.cNT.deleteMany();
+
   await prisma.location.deleteMany();
   await prisma.product.deleteMany();
 
@@ -337,26 +351,128 @@ async function main() {
     data: productSeeds,
   });
 
-  const products = await prisma.product.findMany();
-
-  const productByCode = Object.fromEntries(
-    products.map((product) => [product.productId, product]),
-  );
+  /*
+   * Necesitamos los IDs generados para CNTItem/Entry.
+   */
+  const products = await prisma.product.findMany({
+    orderBy: {
+      id: 'asc',
+    },
+  });
 
   /*
    * =========================================================
-   * CNT DE PICKING
+   * TODOS LOS CNT
    * =========================================================
    */
 
-  console.log('📦 Creando CNT de picking...');
+  console.log('📦 Creando CNT...');
+
+  let cntNumber = 1;
+
+  const pickingCNTSeeds: PickingCNTSeed[] = [];
+
+  for (const category of CATEGORIES) {
+    const chamber = chamberForCategory(category);
+
+    const categoryLocations = pickingLocations
+      .filter((location) => location.chamber === chamber)
+      .slice(0, 12);
+
+    for (const location of categoryLocations) {
+      pickingCNTSeeds.push({
+        code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+
+        status: 'ACTIVO',
+
+        locationCode: location.code,
+
+        category,
+      });
+
+      cntNumber += 1;
+    }
+  }
 
   /*
-   * 12 CNT por categoría.
-   *
-   * Dejamos muchas ubicaciones de picking vacías para
-   * después poder probar movimientos.
+   * CNT EN PUERTA
    */
+  const doorCNTSeeds = doorLocations.slice(0, 4).map((location) => {
+    const seed = {
+      code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+
+      status: 'ACTIVO' as const,
+
+      locationCode: location.code,
+    };
+
+    cntNumber += 1;
+
+    return seed;
+  });
+
+  /*
+   * CNT FLOTANTES
+   */
+  const floatingCNTSeeds = floatingLocations.map((location) => {
+    const seed = {
+      code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+
+      status: 'ACTIVO' as const,
+
+      locationCode: location.code,
+    };
+
+    cntNumber += 1;
+
+    return seed;
+  });
+
+  /*
+   * CNT AVERÍAS
+   */
+  const damagedCNTSeeds = damagedLocations.map((location) => {
+    const seed = {
+      code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
+
+      status: 'ACTIVO' as const,
+
+      locationCode: location.code,
+    };
+
+    cntNumber += 1;
+
+    return seed;
+  });
+
+  await prisma.cNT.createMany({
+    data: [
+      ...pickingCNTSeeds.map((seed) => ({
+        code: seed.code,
+        status: seed.status,
+        locationCode: seed.locationCode,
+      })),
+      ...doorCNTSeeds,
+      ...floatingCNTSeeds,
+      ...damagedCNTSeeds,
+    ],
+  });
+
+  const pickingCNTs = await prisma.cNT.findMany({
+    where: {
+      code: {
+        in: pickingCNTSeeds.map((seed) => seed.code),
+      },
+    },
+
+    select: {
+      id: true,
+      code: true,
+    },
+  });
+
+  const pickingCNTByCode = new Map(pickingCNTs.map((cnt) => [cnt.code, cnt]));
+
   const cntByCategory: Record<
     Category,
     {
@@ -370,131 +486,17 @@ async function main() {
     CONGELADO: [],
   };
 
-  let cntNumber = 1;
+  for (const seed of pickingCNTSeeds) {
+    const cnt = pickingCNTByCode.get(seed.code);
 
-  for (const category of [
-    'FOOD',
-    'NO_FOOD',
-    'REFRIGERADO',
-    'CONGELADO',
-  ] as const) {
-    const chamber =
-      category === 'FOOD'
-        ? '160'
-        : category === 'NO_FOOD'
-          ? '161'
-          : category === 'REFRIGERADO'
-            ? '162'
-            : '163';
-
-    const categoryLocations = pickingLocations
-      .filter((location) => location.chamber === chamber)
-      .slice(0, 12);
-
-    for (const location of categoryLocations) {
-      const code = `CNT-${cntNumber.toString().padStart(6, '0')}`;
-
-      const cnt = await prisma.cNT.create({
-        data: {
-          code,
-
-          status: 'ACTIVO',
-
-          location: {
-            connect: {
-              code: location.code,
-            },
-          },
-        },
-      });
-
-      cntByCategory[category].push({
-        id: cnt.id,
-        code: cnt.code,
-      });
-
-      cntNumber += 1;
+    if (!cnt) {
+      throw new Error(`CNT ${seed.code} no encontrado después del createMany.`);
     }
-  }
 
-  /*
-   * =========================================================
-   * CNT EN PUERTA
-   * =========================================================
-   */
-
-  console.log('🚪 Creando CNT en puerta...');
-
-  for (let index = 0; index < 4; index += 1) {
-    const doorLocation = doorLocations[index];
-
-    await prisma.cNT.create({
-      data: {
-        code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
-
-        status: 'ACTIVO',
-
-        location: {
-          connect: {
-            code: doorLocation.code,
-          },
-        },
-      },
+    cntByCategory[seed.category].push({
+      id: cnt.id,
+      code: cnt.code,
     });
-
-    cntNumber += 1;
-  }
-
-  /*
-   * =========================================================
-   * CNT FLOTANTES
-   * =========================================================
-   */
-
-  console.log('🌫️ Creando CNT flotantes...');
-
-  for (const floatingLocation of floatingLocations) {
-    await prisma.cNT.create({
-      data: {
-        code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
-
-        status: 'ACTIVO',
-
-        location: {
-          connect: {
-            code: floatingLocation.code,
-          },
-        },
-      },
-    });
-
-    cntNumber += 1;
-  }
-
-  /*
-   * =========================================================
-   * CNT DE AVERÍAS
-   * =========================================================
-   */
-
-  console.log('⚠️ Creando CNT de averías...');
-
-  for (const damagedLocation of damagedLocations) {
-    await prisma.cNT.create({
-      data: {
-        code: `CNT-${cntNumber.toString().padStart(6, '0')}`,
-
-        status: 'ACTIVO',
-
-        location: {
-          connect: {
-            code: damagedLocation.code,
-          },
-        },
-      },
-    });
-
-    cntNumber += 1;
   }
 
   /*
@@ -505,54 +507,6 @@ async function main() {
 
   console.log('🧾 Creando stock e ingresos...');
 
-  async function addEntry({
-    cntId,
-    productCode,
-    lot,
-    dueDate,
-    count,
-  }: {
-    cntId: number;
-    productCode: string;
-    lot: string;
-    dueDate: string;
-    count: number;
-  }) {
-    const product = productByCode[productCode];
-
-    if (!product) {
-      throw new Error(`Producto ${productCode} no encontrado.`);
-    }
-
-    const parsedDueDate = new Date(`${dueDate}T00:00:00`);
-
-    /*
-     * Historial del ingreso.
-     */
-    await prisma.entry.create({
-      data: {
-        cntId,
-        productId: product.id,
-        lot,
-        dueDate: parsedDueDate,
-        count,
-      },
-    });
-
-    /*
-     * Stock físico actual del CNT.
-     */
-    await prisma.cNTItem.create({
-      data: {
-        cntId,
-        productId: product.id,
-        lot,
-        dueDate: parsedDueDate,
-        count,
-      },
-    });
-  }
-
   const categoryIndexes: Record<Category, number> = {
     FOOD: 0,
     NO_FOOD: 0,
@@ -560,21 +514,31 @@ async function main() {
     CONGELADO: 0,
   };
 
+  const entrySeeds: {
+    cntId: number;
+    productId: number;
+    lot: string;
+    dueDate: Date;
+    count: number;
+  }[] = [];
+
+  const cntItemSeeds: {
+    cntId: number;
+    productId: number;
+    lot: string;
+    dueDate: Date;
+    count: number;
+  }[] = [];
+
   for (const product of products) {
     const category = product.category as Category;
 
     const pool = cntByCategory[category];
 
-    /*
-     * Cada producto existe en dos CNT diferentes.
-     *
-     * Esto nos permite probar:
-     *
-     * - FEFO
-     * - varios pickeos para un mismo producto
-     * - faltantes parciales
-     * - recorrido entre ubicaciones
-     */
+    if (pool.length === 0) {
+      throw new Error(`No hay CNT para la categoría ${category}.`);
+    }
+
     const firstIndex = categoryIndexes[category] % pool.length;
 
     const secondIndex = (firstIndex + 5) % pool.length;
@@ -582,11 +546,9 @@ async function main() {
     categoryIndexes[category] += 1;
 
     const firstCnt = pool[firstIndex];
+
     const secondCnt = pool[secondIndex];
 
-    /*
-     * Stock según categoría.
-     */
     const baseStock =
       category === 'FOOD'
         ? randomBetween(260, 420)
@@ -600,44 +562,72 @@ async function main() {
 
     const productSequence = Number(product.productId.split('-')[1]) - 1000;
 
+    const firstDueDate = new Date(
+      `${dueDateForCategory(category, productSequence)}T00:00:00`,
+    );
+
+    const secondDueDate = new Date(
+      `${dueDateForCategory(category, productSequence + 3)}T00:00:00`,
+    );
+
+    const firstLot =
+      `${category.slice(0, 3)}-` +
+      `${productSequence.toString().padStart(3, '0')}-A`;
+
+    const secondLot =
+      `${category.slice(0, 3)}-` +
+      `${productSequence.toString().padStart(3, '0')}-B`;
+
     /*
-     * Primer lote: vence antes.
+     * Entry = historial de ingreso.
      */
-    await addEntry({
-      cntId: firstCnt.id,
+    entrySeeds.push(
+      {
+        cntId: firstCnt.id,
+        productId: product.id,
+        lot: firstLot,
+        dueDate: firstDueDate,
+        count: firstCount,
+      },
 
-      productCode: product.productId,
-
-      lot: `${category.slice(0, 3)}-${productSequence
-        .toString()
-        .padStart(3, '0')}-A`,
-
-      dueDate: dueDateForCategory(category, productSequence),
-
-      count: firstCount,
-    });
+      {
+        cntId: secondCnt.id,
+        productId: product.id,
+        lot: secondLot,
+        dueDate: secondDueDate,
+        count: secondCount,
+      },
+    );
 
     /*
-     * Segundo lote: mismo producto en otro CNT,
-     * con vencimiento posterior.
-     *
-     * generatePickTasks debería consumir primero
-     * el lote A gracias a FEFO.
+     * CNTItem = stock físico actual.
      */
-    await addEntry({
-      cntId: secondCnt.id,
+    cntItemSeeds.push(
+      {
+        cntId: firstCnt.id,
+        productId: product.id,
+        lot: firstLot,
+        dueDate: firstDueDate,
+        count: firstCount,
+      },
 
-      productCode: product.productId,
-
-      lot: `${category.slice(0, 3)}-${productSequence
-        .toString()
-        .padStart(3, '0')}-B`,
-
-      dueDate: dueDateForCategory(category, productSequence + 3),
-
-      count: secondCount,
-    });
+      {
+        cntId: secondCnt.id,
+        productId: product.id,
+        lot: secondLot,
+        dueDate: secondDueDate,
+        count: secondCount,
+      },
+    );
   }
+
+  await prisma.entry.createMany({
+    data: entrySeeds,
+  });
+
+  await prisma.cNTItem.createMany({
+    data: cntItemSeeds,
+  });
 
   /*
    * =========================================================
@@ -645,58 +635,70 @@ async function main() {
    * =========================================================
    */
 
-  const productCount = await prisma.product.count();
+  const [
+    productCount,
+    locationCount,
+    cntCount,
+    entryCount,
+    cntItemCount,
+    locationsByType,
+    stockItems,
+  ] = await Promise.all([
+    prisma.product.count(),
 
-  const locationCount = await prisma.location.count();
+    prisma.location.count(),
 
-  const cntCount = await prisma.cNT.count();
+    prisma.cNT.count(),
 
-  const entryCount = await prisma.entry.count();
+    prisma.entry.count(),
 
-  const cntItemCount = await prisma.cNTItem.count();
+    prisma.cNTItem.count(),
 
-  const stockByCategory = await Promise.all(
-    (['FOOD', 'NO_FOOD', 'REFRIGERADO', 'CONGELADO'] as const).map(
-      async (category) => {
-        const items = await prisma.cNTItem.findMany({
-          where: {
-            product: {
-              category,
-            },
+    prisma.location.groupBy({
+      by: ['type'],
 
-            cnt: {
-              status: 'ACTIVO',
-
-              location: {
-                type: 'PICKING',
-              },
-            },
-          },
-
-          select: {
-            count: true,
-          },
-        });
-
-        return {
-          category,
-
-          stock: items.reduce((total, item) => total + item.count, 0),
-        };
+      _count: {
+        _all: true,
       },
-    ),
-  );
+    }),
 
-  const locationsByType = await prisma.location.groupBy({
-    by: ['type'],
+    prisma.cNTItem.findMany({
+      where: {
+        cnt: {
+          status: 'ACTIVO',
 
-    _count: {
-      _all: true,
-    },
-  });
+          location: {
+            type: 'PICKING',
+          },
+        },
+      },
+
+      select: {
+        count: true,
+
+        product: {
+          select: {
+            category: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const stockByCategory: Record<Category, number> = {
+    FOOD: 0,
+    NO_FOOD: 0,
+    REFRIGERADO: 0,
+    CONGELADO: 0,
+  };
+
+  for (const item of stockItems) {
+    stockByCategory[item.product.category] += item.count;
+  }
 
   console.log('');
   console.log('✅ Seed completado');
+
   console.log('--------------------------------');
 
   console.log(`Productos:    ${productCount}`);
@@ -710,7 +712,6 @@ async function main() {
   console.log(`CNT Items:    ${cntItemCount}`);
 
   console.log('');
-
   console.log('Ubicaciones por tipo:');
 
   for (const item of locationsByType) {
@@ -721,8 +722,8 @@ async function main() {
 
   console.log('Stock PICKING por categoría:');
 
-  for (const item of stockByCategory) {
-    console.log(`${item.category.padEnd(13)} ${item.stock} unidades`);
+  for (const category of CATEGORIES) {
+    console.log(`${category.padEnd(13)} ${stockByCategory[category]} unidades`);
   }
 }
 

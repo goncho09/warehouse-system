@@ -12,19 +12,11 @@ export type Destination =
 
 export type OrderCategory = 'FOOD' | 'NO_FOOD' | 'CONGELADO' | 'REFRIGERADO';
 
-export type PickTaskStatus =
-  | 'PENDIENTE'
-  | 'EN_PROCESO'
-  | 'COMPLETADO'
-  | 'PARCIAL'
-  | 'ANULADO';
-
 export type PickTask = {
   id: number;
   plannedCount: number;
   pickedCount: number;
   cancelledCount: number;
-  status: PickTaskStatus;
 };
 
 export type OrderItem = {
